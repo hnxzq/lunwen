@@ -1,0 +1,1073 @@
+ETL的scala代码：
+package com.yjxxt.etl.job
+
+import ch.hsr.geohash.GeoHash
+import com.yjxxt.etl.util.{MysqlReadUtil, SparkSessionUtil, YjxxtConstants}
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.spark.sql.DataFrame
+
+object Job01AreaDict {
+  def main(args: Array[String]): Unit = {
+    // 创建 Spark 任务
+    val spark = SparkSessionUtil.getSparkSession("DIM层_地理位置区划字典表", YjxxtConstants.SPARK_MASTER_YARN)
+    // ========== 新增：检查并创建 HDFS 路径 ==========
+    val hdfsPath = "hdfs://hdfs-yjx/yjx/app/dim/dim_area_dict"
+    val fs = FileSystem.get(spark.sparkContext.hadoopConfiguration)
+    val path = new Path(hdfsPath)
+    if (!fs.exists(path)) {
+      fs.mkdirs(path)
+      println(s"成功创建 HDFS 路径：$hdfsPath")
+    }
+    // 创建数据库与数据表
+    spark.sql("CREATE DATABASE IF NOT EXISTS dim;")
+    spark.sql(
+      """
+        |CREATE EXTERNAL TABLE IF NOT EXISTS dim.dim_area_dict (
+        | geohash STRING,
+        | province STRING COMMENT '省',
+        | city STRING COMMENT '市',
+        | region STRING COMMENT '县（区）'
+        |)
+        |COMMENT '地理位置维度表'
+        |STORED AS PARQUET
+        |TBLPROPERTIES ('parquet.compression'='SNAPPY')
+        |LOCATION 'hdfs://hdfs-yjx/yjx/app/dim/dim_area_dict';
+        |""".stripMargin)
+    // 读取业务数据库 MySQL
+    val df: DataFrame = MysqlReadUtil.readToFrame(spark, "yjx-shop", "t_md_areas")
+    // 创建临时视图
+    df.createTempView("v_md_areas")
+    // 自定义 gps2geo 函数
+    val gps2geo = (lat: Double, lng: Double) => {
+      GeoHash.withCharacterPrecision(lat, lng, 6).toBase32
+    }
+    // 注册自定义 gps2geo 函数
+    spark.udf.register("gps2geo", gps2geo)
+    // 将每个省市县对应的经纬度数据转为 GeoStr
+    spark.sql(
+      """
+        |INSERT OVERWRITE TABLE dim.dim_area_dict
+        |SELECT
+        | gps2geo(l4.bd09_lat, l4.bd09_lng) AS geohash,
+        | l1.areaname AS province,
+        | l2.areaname AS city,
+        | l3.areaname AS region
+        |FROM v_md_areas l4
+        |JOIN v_md_areas l3 ON l4.LEVEL = 4 AND l4.parentid = l3.id
+        |JOIN v_md_areas l2 ON l3.parentid = l2.id
+        |JOIN v_md_areas l1 ON l2.parentid = l1.id;
+        |""".stripMargin)
+    // 关闭连接
+    spark.stop()
+  }
+}
+package com.yjxxt.etl.job
+import com.yjxxt.etl.util.{DateTimeUtil, SparkSessionUtil, YjxxtConstants}
+/**
+ * 将设备与用户账户进行绑定，多设备多用户时处理衰减操作
+ */
+object Job02DeviceAccountBindByDSL {
+  def main(args: Array[String]): Unit = {
+    // 默认处理昨天的数据
+    var startDate = DateTimeUtil.getYesterdayDate;
+    // 获取用户传入的日期
+    if (args.length > 0) {
+      startDate = args(0)
+    }
+    // TODO：用于测试的日期，打包时注释掉
+    startDate = "2024-07-08"
+    // 创建 Spark 任务
+    val spark = SparkSessionUtil.getSparkSession("AppEventLog_设备账号绑定评分计算", YjxxtConstants.SPARK_MASTER_LOCAL)
+    spark.sql("ADD JAR hdfs://hdfs-yjx/tydt/offline/jars/json-serde-1.3.8-jar-with-dependencies.jar")
+    // 创建数据库与数据表
+    spark.sql("CREATE DATABASE IF NOT EXISTS dwd;")
+    spark.sql(
+      """
+        |CREATE EXTERNAL TABLE IF NOT EXISTS dwd.dwd_device_account_bind_score (
+        | deviceId STRING COMMENT '设备',
+        | account STRING COMMENT '账号',
+        | score DOUBLE COMMENT '评分',
+        | last_login STRING COMMENT '最后一次登录时间'
+        |)
+        |COMMENT '设备账号绑定评分表'
+        |PARTITIONED BY (dt STRING)
+        |STORED AS PARQUET
+        |TBLPROPERTIES ('parquet.compression' = 'SNAPPY')
+        |LOCATION 'hdfs://hdfs-yjx/yjx/app/dwd/dwd_device_account_bind_score';
+        |""".stripMargin)
+    // 根据条件查询 ods.ods_app_event_log 表，并创建临时视图
+    val appEventLog = spark.read.table("ods.ods_app_event_log")
+      .where(s" dt='$startDate' AND deviceId IS NOT NULL AND sessionId IS NOT NULL")
+      .selectExpr("deviceId", "IF(account='', 'null', account) AS account", "sessionId", "ts")
+    appEventLog.createTempView("v_event_log")
+    // 计算每一台“设备-账号”的会话分数
+    val combineSessionCur = spark.sql(
+      """
+      |SELECT
+      | deviceId,
+      | account,
+      | COUNT(*) * 100 AS score,
+      | MAX(ts) AS last_login
+      |FROM v_event_log
+      |GROUP BY deviceId, account
+      |""".stripMargin)
+    combineSessionCur.createTempView("v_combine_session_cur")
+    // 获取前一日的设备账号绑定评分表数据
+    val prevDate = DateTimeUtil.getPrevDate(startDate)
+    spark.read.table("dwd.dwd_device_account_bind_score")
+      .where(s" dt='$prevDate' ")
+      .createTempView("v_combine_session_prev")
+    /*
+    使用昨日的设备账号绑定评分表 FULL JOIN 当前的设备账号绑定评分表，分别有以下三种情况：
+    T-1 日（昨日设备账号绑定评分表）出现的组合，T 日（当前设备账号绑定评分表）没有出现，做 Score 衰减
+    T-1 日（昨日设备账号绑定评分表）出现的组合，T 日（当前设备账号绑定评分表）也出现，做 Score 累加
+    T-1 日（昨日设备账号绑定评分表）没出现的组合，T 日（当前设备账号绑定评分表）出现，取 T 日的 Score
+    */
+    val bindScoreResult = spark.sql(
+      s"""
+         |SELECT
+         |NVL(cur.deviceId, prev.deviceId) deviceId,
+         |NVL(cur.account, prev.account) account,
+         |CASE
+         | -- T-1 日（昨日设备账号绑定评分表）出现的组合，T 日（当前设备账号绑定评分表）没有出现，做 Score 衰减
+         | WHEN prev.score IS NOT NULL AND cur.score IS NULL THEN prev.score * 0.6
+         | -- T-1 日（昨日设备账号绑定评分表）出现的组合，T 日（当前设备账号绑定评分表）也出现，做 Score 累加
+         | WHEN prev.score IS NOT NULL AND cur.score IS NOT NULL THEN prev.score + cur.score
+         | -- T-1 日（昨日设备账号绑定评分表）没出现的组合，T 日（当前设备账号绑定评分表）出现，取 T 日的 Score
+         | WHEN prev.score IS NULL AND cur.score IS NOT NULL THEN cur.score
+         |END AS score,
+         |NVL(cur.last_login, prev.last_login) last_login
+         |FROM v_combine_session_cur cur
+         |FULL JOIN v_combine_session_prev prev ON cur.deviceId = prev.deviceId
+         | AND IF(cur.account=null, '', cur.account) = IF(prev.account=null, '', prev.account)
+         |""".stripMargin)
+    bindScoreResult.createTempView("v_combine_session_result")
+    // 将最终得到的绑定评分表插入数据库
+    spark.sql(
+      s"""
+         |INSERT OVERWRITE TABLE dwd.dwd_device_account_bind_score PARTITION(dt='$startDate')
+         |SELECT * FROM v_combine_session_result
+         |""".stripMargin)
+    // 关闭连接
+    spark.stop()
+  }
+}
+package com.yjxxt.etl.job
+
+import com.yjxxt.etl.util.{DateTimeUtil, SparkSessionUtil, YjxxtConstants}
+
+/**
+ * 将设备与用户账户进行绑定，多设备多用户时处理衰减操作
+ */
+object Job02DeviceAccountBindBySQL {
+  def main(args: Array[String]): Unit = {
+    // 默认处理昨天的数据
+    var startDate = DateTimeUtil.getYesterdayDate;
+    // 获取用户传入的日期
+    if (args.length > 0) {
+      startDate = args(0)
+    }
+    // TODO：用于测试的日期，打包时注释掉
+    //startDate = "2024-07-09"
+    // 获取前一日的日期
+    val prevDate = DateTimeUtil.getPrevDate(startDate)
+    // 创建 Spark 任务
+    val spark = SparkSessionUtil.getSparkSession("AppEventLog_设备账号绑定评分计算", YjxxtConstants.SPARK_MASTER_YARN)
+    spark.sql("ADD JAR hdfs://hdfs-yjx/tydt/offline/jars/json-serde-1.3.8-jar-with-dependencies.jar")
+    // 创建数据库与数据表
+    spark.sql("CREATE DATABASE IF NOT EXISTS dwd;")
+    spark.sql(
+      """
+        |CREATE EXTERNAL TABLE IF NOT EXISTS dwd.dwd_device_account_bind_score (
+        | deviceId STRING COMMENT '设备',
+        | account STRING COMMENT '账号',
+        | score DOUBLE COMMENT '评分',
+        | last_login STRING COMMENT '最后一次登录时间'
+        |)
+        |COMMENT '设备账号绑定评分表'
+        |PARTITIONED BY (dt STRING)
+        |STORED AS PARQUET
+        |TBLPROPERTIES ('parquet.compression' = 'SNAPPY')
+        |LOCATION 'hdfs://hdfs-yjx/yjx/app/dwd/dwd_device_account_bind_score';
+        |""".stripMargin)
+    val sql =
+      s"""
+         |-- 根据条件查询 ods.ods_app_event_log 表，并创建临时视图
+         |WITH v_event_log AS (
+         | SELECT
+         | deviceId,
+         | IF(account = '', 'null', account) AS account,
+         | sessionId,
+         | ts
+         | FROM ods.ods_app_event_log
+         | WHERE dt = '${startDate}' AND deviceId IS NOT NULL AND sessionId IS NOT NULL
+         |),
+         |-- 计算每一台“设备-账号”的会话分数
+         |v_combine_session_cur AS (
+         | SELECT
+         | deviceId,
+         | account,
+         | COUNT(*) * 100 AS score,
+         | MAX(ts) AS last_login
+         | FROM v_event_log
+         | GROUP BY deviceId, account
+         |),
+         |-- 获取前一日的设备账号绑定评分表数据
+         |v_combine_session_prev AS (
+         | SELECT * FROM dwd.dwd_device_account_bind_score WHERE dt='${prevDate}'
+         |)
+         |INSERT OVERWRITE TABLE dwd.dwd_device_account_bind_score PARTITION(dt='${startDate}')
+         |SELECT
+         |NVL(cur.deviceId, prev.deviceId) AS deviceId,
+         |NVL(cur.account, prev.account) AS account,
+         |CASE
+         | -- T-1 日（昨日设备账号绑定评分表）出现的组合，T 日（当前设备账号绑定评分表）没有出现，做 Score 衰减
+         | WHEN prev.score IS NOT NULL AND cur.score IS NULL THEN prev.score * 0.6
+         | -- T-1 日（昨日设备账号绑定评分表）出现的组合，T 日（当前设备账号绑定评分表）也出现，做 Score 累加
+         | WHEN prev.score IS NOT NULL AND cur.score IS NOT NULL THEN prev.score + cur.score
+         | -- T-1 日（昨日设备账号绑定评分表）没出现的组合，T 日（当前设备账号绑定评分表）出现，取 T 日的 Score
+         | WHEN prev.score IS NULL AND cur.score IS NOT NULL THEN cur.score
+         |END AS score,
+         |NVL(cur.last_login, prev.last_login) last_login
+         |FROM v_combine_session_cur cur
+         |-- 使用昨日的设备账号绑定评分表 FULL JOIN 当前的设备账号绑定评分表
+         |FULL JOIN v_combine_session_prev prev ON cur.deviceId = prev.deviceId
+         | AND NVL(cur.account, '') = NVL(prev.account, '');
+         |""".stripMargin
+    spark.sql(sql)
+    println("SQL 执行完毕！")
+    // 关闭连接
+    spark.stop()
+  }
+}
+package com.yjxxt.etl.job
+
+import ch.hsr.geohash.GeoHash
+import com.yjxxt.etl.pojo.AppEventDetail
+import com.yjxxt.etl.util.{DateTimeUtil, SparkSessionUtil, YjxxtConstants}
+import org.apache.commons.compress.utils.IOUtils
+import org.apache.commons.lang3.StringUtils
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
+import org.lionsoul.ip2region.xdb.Searcher
+import redis.clients.jedis.Jedis
+
+import java.util.UUID
+
+/**
+ * AppEventDetail_ODS层_ETL_DWD层
+ */
+object Job03AppEventDetailOdsToDwd {
+  // 前一日最大的 GUID
+  private var lastMaxGuid = 0L
+
+  def main(args: Array[String]): Unit = {
+    // 初始化默认参数
+    var redisHost = YjxxtConstants.REDIS_SERVER_HOSTNAME
+    var redisPort = YjxxtConstants.REDIS_SERVER_PORT
+    var redisPassword = YjxxtConstants.REDIS_SERVER_PASSWORD
+    // [起始时间, 结束时间)
+    var startDate = DateTimeUtil.getYesterdayDate
+    var endDate = DateTimeUtil.getCurrentDate
+    // 获取用户传入的参数
+    if (args.length >= 5) {
+      startDate = args(0)
+      endDate = args(1)
+      redisHost = args(2)
+      redisPort = args(3).toInt
+      redisPassword = args(4)
+    }
+    // TODO：用于测试的日期，打包时注释掉
+    //startDate = "2024-07-06"
+    //endDate = "2024-07-07"
+    // 创建 Redis 连接，获取前一日最大的 GUID
+    val jedis = new Jedis(redisHost, redisPort)
+    jedis.auth(redisPassword)
+    jedis.select(0)
+    val guidCnt = jedis.get("guid_cnt")
+    // 如果 guidCnt 不为空，赋值给 lastMaxGuid，否则为 0
+    if (guidCnt != null) {
+      lastMaxGuid = guidCnt.toLong
+    }
+    if (jedis.isConnected) jedis.close()
+    // 创建 Spark 任务
+    val spark = SparkSessionUtil.getSparkSession("AppEventDetail_ODS层_ETL_DWD层", YjxxtConstants.SPARK_MASTER_YARN)
+    spark.sql("ADD JAR hdfs://hdfs-yjx/tydt/offline/jars/json-serde-1.3.8-jar-with-dependencies.jar")
+    // 清洗过滤
+    val filteredDataStream = dataCleaning(spark, startDate, endDate)
+    // 数据规范化处理
+    val standardDataStream = dataStandard(spark, filteredDataStream)
+    // Session 分割（30 min）
+    val splitSessionDataStream = dataSplitSession(spark, standardDataStream)
+    // 地理位置转换（GPS、IP）
+    val areaDataStream = dataWithArea(spark, splitSessionDataStream)
+    // 账号回填，ID-Mapping，新老访客标记
+    val idMappingDataStream = dataIdMappingMarkIsNew(spark, areaDataStream, startDate)
+    // 保存结果到 Hive
+    dataSave(spark, idMappingDataStream, startDate)
+    // 关闭连接
+    spark.stop()
+  }
+
+  /**
+   * 清洗过滤
+   *
+   * @param spark
+   * @param startDate 起始日期，左闭
+   * @param endDate   结束日期，右开
+   * @return
+   */
+  def dataCleaning(spark: SparkSession, startDate: String, endDate: String): DataFrame = {
+    // 读取指定分区的数据 startDate
+    val eventLog = spark.read.table("ods.ods_app_event_log")
+      .where(s" dt='$startDate' ")
+    // 自定义 UDF 函数，判断字符串是否为 Blank
+    import org.apache.spark.sql.functions._
+    val isNotBlank = udf((s: String) => {
+      StringUtils.isNotBlank(s)
+    })
+    // 获取起始时间和结束时间的时间戳
+    val startTime: Long = DateTimeUtil.dateStrToTimestamp(s"$startDate 00:00:00",
+      YjxxtConstants.DATE_FORMAT_PATTERN_YMDHMS)
+    val endTime: Long = DateTimeUtil.dateStrToTimestamp(s"$endDate 00:00:00",
+      YjxxtConstants.DATE_FORMAT_PATTERN_YMDHMS)
+    // 过滤掉日志中缺少关键字段的记录（sessionId/deviceId/eventId/properties 缺任何一个都不行）
+    eventLog.where(
+      col("ts").>=(s"$startTime") and col("ts").<(s"$endTime")
+        and isNotBlank(col("sessionId"))
+        and isNotBlank(col("deviceId"))
+        and isNotBlank(col("eventId"))
+        and size(col("properties")).>(0)
+    )
+  }
+
+  /**
+   * 数据规范化处理
+   *
+   * @param spark
+   * @param filtered 已清洗过滤过的数据
+   * @return
+   */
+  def dataStandard(spark: SparkSession, filtered: DataFrame): Dataset[AppEventDetail] = {
+    // 在 IDEA 中开发 SparkSQL 如果遇到模型转换，需要导入隐式转换
+    import spark.implicits._
+    filtered.createTempView("v_filtered_data")
+    val standard = spark.sql(
+      """
+        |SELECT
+        |IF(account='', null, account) AS account,
+        |appId,
+        |appVersion,
+        |carrier,
+        |deviceId,
+        |deviceType,
+        |eventId,
+        |ip,
+        |latitude,
+        |longitude,
+        |netType,
+        |osName,
+        |osVersion,
+        |properties,
+        |resolution,
+        |sessionId,
+        |ts,
+        |null AS splitSessionId,
+        |null AS province,
+        |null AS city,
+        |null AS region,
+        |null AS filledAccount,
+        |-1 AS guid,
+        |0 AS isNew -- 默认老用户
+        |FROM v_filtered_data
+        |""".stripMargin)
+    standard.as[AppEventDetail]
+  }
+
+
+  /**
+   * Session 分割
+   *
+   * @param spark
+   * @param standard 已规范化处理过的数据
+   * @return
+   */
+  def dataSplitSession(spark: SparkSession, standard: Dataset[AppEventDetail]) = {
+    // 在 IDEA 中开发 SparkSQL 如果遇到模型转换，需要导入隐式转换
+    import spark.implicits._
+    // 读取 Session 信息
+    standard.rdd
+      .groupBy(event => event.sessionId)
+      .flatMap(kv => {
+        // 获取分组后的 Event 集合，并按照时间戳排序
+        val eventList = kv._2.toList.sortBy(event => event.ts)
+        // 生成一个 SessionID
+        var tmpSessionId = UUID.randomUUID().toString.replaceAll("-", "")
+        // 开始遍历 List
+        for (i <- eventList.indices) {
+          // 将刚才生成的 SessionID 赋值给 splitSessionId
+          eventList(i).splitSessionId = tmpSessionId
+          // 判断是否要再次生成新的 SessionID
+          // 下一条数据的时间减去当前数据的时间 > 30 min 则生成新的 SessionID
+          if (i < eventList.size - 1 &&
+            (eventList(i + 1).ts - eventList(i).ts) > 30 * 60 * 1000) {
+            tmpSessionId = UUID.randomUUID().toString.replaceAll("-", "")
+          }
+        }
+        // 返回已分割完 SessionID 的 List
+        eventList
+      })
+      .toDS()
+  }
+
+
+  /**
+   * 地理位置转换
+   *
+   * @param spark
+   * @param splitSession 已分割过 Session 的数据
+   * @return
+   */
+  def dataWithArea(spark: SparkSession, splitSession: Dataset[AppEventDetail]) = {
+    // 在 IDEA 中开发 SparkSQL 如果遇到模型转换，需要导入隐式转换
+    import spark.implicits._
+    // 读取区划维度表信息（geohash、省、市、县）
+    val areaDict = spark.read.table("dim.dim_area_dict")
+      .where("geohash IS NOT NULL AND geohash != '' ")
+    // 将区划维度表信息转为 geoMap
+    val areaDict2geoMap = areaDict.rdd.map({
+      case Row(geohash: String, province: String, city: String, region: String) => (geohash, (province, city, region))
+    }).collectAsMap()
+    // 广播到 Executor 节点，减少内存占用
+    val geoMapBroadcast = spark.sparkContext.broadcast(areaDict2geoMap)
+    // 读取 ip2region.xdb 文件
+    val xdbPath = new Path("hdfs://hdfs-yjx/tydt/offline/data/ip2region.xdb")
+    val fs = FileSystem.get(new Configuration())
+    val inputStream = fs.open(xdbPath)
+    val len = fs.getFileStatus(xdbPath).getLen
+    val ip2regionArray = new Array[Byte](len.toInt)
+    // 读取数据
+    IOUtils.readFully(inputStream, ip2regionArray)
+    // 关闭流
+    IOUtils.closeQuietly(inputStream)
+    // 广播到 Executor 节点，减少内存占用
+    val ip2regionBroadcast = spark.sparkContext.broadcast(ip2regionArray)
+    // 根据分区遍历数据
+    splitSession.mapPartitions(partIter => {
+      // 读取广播数据中的 geoMap
+      val areaDictForExecutor = geoMapBroadcast.value
+      // 读取广播数据中的 ip2regionArray
+      val ip2regionForExecutor: Array[Byte] = ip2regionBroadcast.value
+      // 使用上述的 ip2regionForExecutor 创建一个完全基于内存的查询对象
+      val searcher = Searcher.newWithBuffer(ip2regionForExecutor)
+      // 开始遍历数据
+      partIter.map(event => {
+        // 获取经纬度并计算出 GeoHash
+        val latitude = event.latitude
+        val longitude = event.longitude
+        val geoHash = GeoHash.geoHashStringWithCharacterPrecision(latitude, longitude, 6)
+        // 根据 geo 匹配数据，取出省市县信息
+        if (areaDictForExecutor.contains(geoHash)) {
+          val areaInfo = areaDictForExecutor.getOrElse(geoHash, ("", "", ""))
+          event.province = areaInfo._1
+          event.city = areaInfo._2
+          event.region = areaInfo._3
+        }
+        // 根据 ip 匹配数据，取出省市县信息
+        else {
+          // TODO：将匹配不到省市县信息的经纬度记录到专门的文件
+          // 根据 ip 查询 ip2region 并解析
+          val region = searcher.search(event.ip)
+          val regions = region.split("\\|")
+          if (regions.size >= 5 &&
+            StringUtils.isNotBlank(regions(2)) && StringUtils.isNotBlank(regions(3))) {
+            event.province = regions(2) // e.g. 伦敦
+            event.city = regions(3) // e.g. 伦敦
+            event.region = ""
+          }
+        }
+        event
+      })
+    })
+  }
+
+  /**
+   * 构建全局用户唯一标识（GUID），并标记新老用户。将 GUID 保存至 Redis
+   *
+   * @param spark
+   * @param areaed    已转换过地理位置的数据
+   * @param startDate 查询设备账号绑定评分表的分区日期
+   * @return
+   */
+  def dataIdMappingMarkIsNew(spark: SparkSession, areaed: Dataset[AppEventDetail], startDate: String) = {
+    // 在 IDEA 中开发 SparkSQL 如果遇到模型转换，需要导入隐式转换
+    import spark.implicits._
+    // 创建临时视图（基于设备账号绑定评分表，将评分最高的账号信息回填到匿名数据的 filledAccount 字段中）
+    areaed.createTempView("v_area_dataStream")
+    val anonymousFilled = spark.sql(
+      s"""
+         |SELECT
+         |area.account,
+         |area.appId,
+         |area.appVersion,
+         |area.carrier,
+         |area.deviceId,
+         |area.deviceType,
+         |area.eventId,
+         |area.ip,
+         |area.latitude,
+         |area.longitude,
+         |area.netType,
+         |area.osName,
+         |area.osVersion,
+         |area.properties,
+         |area.resolution,
+         |area.sessionId,
+         |area.ts,
+         |area.splitSessionId,
+         |area.province,
+         |area.city,
+         |area.region,
+         |-- 回填账号，如果没有账号信息，根据设备查询分数最高的账号进行回填
+         |NVL(area.account, t2.account) filledAccount,
+         |area.guid,
+         |area.isNew
+         |FROM v_area_dataStream area
+         |LEFT JOIN (
+         | -- 查询设备账号绑定评分表，根据 deviceId 分组，获取账号信息。根据分数倒序取第一，如果分数相同 last_login 倒序取第一
+         | SELECT
+         | deviceId,
+         | account
+         | FROM (
+         | SELECT
+         | deviceId,
+         | account,
+         | ROW_NUMBER() OVER(PARTITION BY deviceId ORDER BY score DESC, last_login DESC) AS r
+         | FROM dwd.dwd_device_account_bind_score
+         | WHERE dt='$startDate' AND account IS NOT NULL
+         | ) t1 WHERE r = 1
+         |) t2 ON area.deviceId = t2.deviceId
+         |""".stripMargin)
+    // 转换成 AppEventDetail 对象便于操作
+    val dataSet: Dataset[AppEventDetail] = anonymousFilled.as[AppEventDetail]
+    // 将前一日最大的 GUID 广播给 Executor
+    val lastMaxGuidBroadcast = spark.sparkContext.broadcast(lastMaxGuid)
+    // 根据分区遍历数据
+    dataSet.mapPartitions(partIter => {
+      // 连接 Redis 服务器
+      val jedis = new Jedis(YjxxtConstants.REDIS_SERVER_HOSTNAME, YjxxtConstants.REDIS_SERVER_PORT)
+      jedis.auth(YjxxtConstants.REDIS_SERVER_PASSWORD)
+      jedis.select(0)
+      // 声明 GUID
+      var guidStr: String = null
+      // 遍历数据，根据以下流程获取 GUID
+      /*
+      操作流程：
+      1. 根据用户的 filledAccount 信息，从 Redis 获取 GUID。如果是老用户，可以获取到对应的值（Redis 中存在），如果是新用户则获取不
+      到（Redis 还没有）。如果可以获取到 GUID（老用户），直接将 GUID 赋值给用户即可
+      2. 如果 filledAccount 获取不到，则根据 deviceId 获取 GUID，分为以下两种情况：
+      a. 根据 deviceId 可以获取到 GUID，且今天的行为数据有 filledAccount 信息，说明昨天是匿名访问，今天已被进行归属（回填账号）
+      操作，需要重新以 filledAccount 信息绑定 GUID
+      b. 根据 deviceId 可以获取到 GUID，且今天的行为数据没有 filledAccount 信息，说明昨天是匿名访问，今天还是匿名访问，不做任何
+      处理
+      3. 如果 filledAccount 和 deviceId 都获取不到 GUID，说明这是一个新用户，那么就生成 GUID（通过 guid_cnt 获取自增值），然后根
+      据行为数据中的 filledAccount 进行关联，关联不到再根据 deviceId 进行关联
+      */
+      partIter.map(event => {
+        // 根据用户的 filledAccount 信息，从 Redis 获取 GUID
+        // 如果是老用户，可以获取到对应的值（Redis 中存在），如果是新用户则获取不到（Redis 还没有）
+        guidStr = jedis.get(event.filledAccount)
+        // 老用户处理，直接将 GUID 赋值给用户即可
+        if (event.filledAccount != null && guidStr != null) {
+          event.guid = guidStr.toLong
+        }
+        // 如果 filledAccount 获取不到的情况，匿名访问处理或者新用户处理
+        if (event.filledAccount == null || guidStr == null) {
+          // 根据 deviceId 获取 GUID
+          guidStr = jedis.get(event.deviceId)
+          // 匿名访问处理。可以获取到 GUID
+          if (guidStr != null) {
+            event.guid = guidStr.toLong
+            // 根据 deviceId 可以获取到 GUID，且今天的行为数据有 filledAccount 信息，说明昨天是匿名访问，今天已被进行归属（回填账号） 操作，需要重新以 filledAccount 信息绑定 GUID
+            if (event.filledAccount != null) {
+              jedis.del(event.deviceId)
+              jedis.set(event.filledAccount, guidStr)
+            } else {
+              // 根据 deviceId 可以获取到 GUID，且今天的行为数据没有 filledAccount 信息，说明昨天是匿名访问，今天还是匿名访问，不做任 何处理
+            }
+          }
+          // 新用户处理。如果 filledAccount 和 deviceId 都获取不到 GUID，说明这是一个新用户，那么就生成 GUID（通过 guid_cnt 获取自增 值）
+          else if (guidStr == null) {
+            // 用计数器获取一个新的 GUID
+            val newGuid = jedis.incr("guid_cnt")
+            // 然后根据行为数据中的 filledAccount 进行关联，关联不到再根据 deviceId 进行关联
+            val key = if (event.filledAccount == null) event.deviceId else event.filledAccount
+            jedis.set(key, newGuid.toString)
+            event.guid = newGuid
+          }
+        }
+        // 标记新老访客，新用户：1，老用户：不用操作（默认为 0）
+        // 比昨日最大的标识值还大的用户标记为新用户即可
+        if (event.guid > lastMaxGuidBroadcast.value) {
+          event.isNew = 1
+        }
+        event
+      })
+    })
+  }
+
+
+  /**
+   * 保存结果
+   *
+   * @param spark
+   * @param dataSet   已处理完成的 Dataset[AppEventDetail]
+   * @param startDate 保存至 dwd.dwd_app_event_detail 表时的分区日期
+   * @return
+   */
+  def dataSave(spark: SparkSession, dataSet: Dataset[AppEventDetail], startDate: String) = {
+    // 创建数据库与数据表
+    spark.sql("CREATE DATABASE IF NOT EXISTS dwd;")
+    spark.sql(
+      """
+        |CREATE EXTERNAL TABLE IF NOT EXISTS dwd.dwd_app_event_detail (
+        | account STRING COMMENT '会员ID',
+        | appId STRING COMMENT 'AppID',
+        | appVersion STRING COMMENT 'App版本',
+        | carrier STRING COMMENT '运营商',
+        | deviceId STRING COMMENT '设备ID',
+        | deviceType STRING COMMENT '设备类型',
+        | eventId STRING COMMENT '事件ID',
+        | ip STRING COMMENT 'IP地址',
+        | latitude DOUBLE COMMENT '纬度',
+        | longitude DOUBLE COMMENT '经度',
+        | netType STRING COMMENT '网络类型',
+        | osName STRING COMMENT '手机操作系统',
+        | osVersion STRING COMMENT '手机操作系统版本',
+        | properties MAP<STRING,STRING> COMMENT '事件数据',
+        | resolution STRING COMMENT '分辨率',
+        | sessionId STRING COMMENT '会话ID',
+        | ts BIGINT COMMENT '事件时间',
+        | splitSessionId STRING COMMENT '分割SessionID',
+        | province STRING COMMENT '省',
+        | city STRING COMMENT '市',
+        | region STRING COMMENT '县（区）',
+        | filledAccount STRING COMMENT '回填账户',
+        | guid BIGINT COMMENT '全局用户唯一标识',
+        | isNew INT COMMENT '是否新用户，1 为新用户，0 为老用户'
+        |)
+        |COMMENT '全局用户行为事件明细事实表'
+        |PARTITIONED BY (dt STRING)
+        |STORED AS PARQUET
+        |TBLPROPERTIES ('parquet.compression'='SNAPPY')
+        |LOCATION 'hdfs://hdfs-yjx/yjx/app/dwd/dwd_app_event_detail';
+        |""".stripMargin)
+    dataSet.createTempView("v_idMappingMarkIsNew")
+    spark.sql(
+      s"""
+         |INSERT OVERWRITE TABLE dwd.dwd_app_event_detail PARTITION(dt='$startDate')
+         |SELECT
+         |account,
+         |appId,
+         |appVersion,
+         |carrier,
+         |deviceId,
+         |deviceType,
+         |eventId,
+         |ip,
+         |latitude,
+         |longitude,
+         |netType,
+         |osName,
+         |osVersion,
+         |properties,
+         |resolution,
+         |sessionId,
+         |ts,
+         |splitSessionId,
+         |province,
+         |city,
+         |region,
+         |filledAccount,
+         |guid,
+         |isNew
+         |FROM v_idMappingMarkIsNew
+         |""".stripMargin)
+  }
+
+}
+package com.yjxxt.etl.pojo
+
+// App 代指 Application，表示所有应用程序 APP/小程序/Web
+case class AppEventDetail(account: String,
+                          appId: String,
+                          appVersion: String,
+                          carrier: String,
+                          deviceId: String,
+                          deviceType: String,
+                          eventId: String,
+                          ip: String,
+                          latitude: Double,
+                          longitude: Double,
+                          netType: String,
+                          osName: String,
+                          osVersion: String,
+                          properties: Map[String, String],
+                          resolution: String,
+                          sessionId: String,
+                          ts: BigInt,
+                          // ods 表之外的数据
+                          var splitSessionId: String = "", // 分割 SessionID
+                          var province: String = "", // 省
+                          var city: String = "", // 市
+                          var region: String = "", // 县（区）
+                          var filledAccount: String = "", // 回填账户
+                          var guid: BigInt = -1, // 全局 GUID
+                          var isNew: Int = 0) // 是否新用户，1 为新用户，0 为老用户
+package com.yjxxt.etl.util
+
+import java.time.format.DateTimeFormatter
+import java.time.{LocalDate, LocalDateTime, ZoneOffset}
+
+/**
+ * 日期时间工具类
+ */
+object DateTimeUtil {
+
+  // 设置和 Hive 分区相同的时间格式
+  val dateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern(YjxxtConstants.DATE_FORMAT_PATTERN_YMD)
+
+  /**
+   * 获取当前日期（今天）
+   *
+   * @return 格式化的当前日期字符串
+   */
+  def getCurrentDate: String = {
+    LocalDate.now().format(dateTimeFormatter)
+  }
+
+  /**
+   * 获取当前日期的明天日期（明天）
+   *
+   * @return 格式化的明天日期字符串
+   */
+  def getTomorrowDate: String = {
+    LocalDate.now().plusDays(1).format(dateTimeFormatter)
+  }
+
+  /**
+   * 获取当前日期的昨天日期（昨天）
+   *
+   * @return 格式化的昨天日期字符串
+   */
+  def getYesterdayDate: String = {
+    LocalDate.now().minusDays(1).format(dateTimeFormatter)
+  }
+
+  /**
+   * 获取指定日期的昨天日期
+   *
+   * @param dateStr 日期字符串，格式：yyyy-MM-dd
+   * @return 指定日期前一天的格式化字符串
+   */
+  def getPrevDate(dateStr: String): String = {
+    LocalDate.parse(dateStr, dateTimeFormatter).minusDays(1).format(dateTimeFormatter)
+  }
+
+  /**
+   * 将日期字符串转为日期对象
+   *
+   * @param dateStr 日期字符串，格式：yyyy-MM-dd
+   * @return LocalDate对象
+   */
+  def dateStrToDate(dateStr: String): LocalDate = {
+    LocalDate.parse(dateStr, dateTimeFormatter)
+  }
+
+  /**
+   * 日期字符串转为毫秒时间戳
+   *
+   * @param dateStr 日期字符串
+   * @param pattern 日期格式
+   * @return 毫秒级时间戳
+   */
+  def dateStrToTimestamp(dateStr: String, pattern: String): Long = {
+    LocalDateTime.parse(dateStr, DateTimeFormatter.ofPattern(pattern))
+      .toInstant(ZoneOffset.of("+8"))
+      .toEpochMilli
+  }
+}
+package com.yjxxt.etl.util
+
+import org.apache.spark.sql.{DataFrame, SparkSession}
+import scala.collection.mutable
+
+/**
+ * 读取 MySQL 工具类
+ */
+object MysqlReadUtil {
+  def readToFrame(spark: SparkSession, dbName: String, tableName: String): DataFrame = {
+    val map = mutable.HashMap[String, String]()
+    map.put("driver", YjxxtConstants.MYSQL_DRIVER)
+    map.put("url", YjxxtConstants.MYSQL_URL.concat(dbName))
+    map.put("useUnicode", "true")
+    map.put("characterEncoding", "UTF-8")
+    map.put("dbtable", tableName)
+    map.put("user", YjxxtConstants.MYSQL_USERNAME)
+    map.put("password", YjxxtConstants.MYSQL_PASSWORD)
+    spark.read.format("jdbc").options(map).load()
+  }
+}
+package com.yjxxt.etl.util
+
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.SparkSession
+
+/**
+ * SparkSession 工具类
+ */
+object SparkSessionUtil {
+
+  /**
+   * 获取 SparkSession 对象
+   *
+   * @param appName 应用名称
+   * @param master  运行模式
+   * @return SparkSession 对象
+   */
+  def getSparkSession(appName: String, master: String): SparkSession = {
+    // 初始化配置对象并设置运行模式与 AppName
+    val conf = new SparkConf()
+      .setAppName("Application[" + appName + "]")
+      .setMaster(master)
+      // false 表示关闭 SparkSQL 的 Parquet 文件解析器，使用 Hive 的 Parquet 文件解析器
+      .set("spark.sql.hive.convertMetastoreParquet", "false")
+
+    // 根据配置对象初始化 SparkSession 对象
+    val spark = SparkSession.builder()
+      .config(conf)
+      .enableHiveSupport()
+      .getOrCreate()
+
+    // 设置日志级别
+    val sparkContext = spark.sparkContext
+    sparkContext.setLogLevel("ERROR")
+
+    // 返回 Spark 对象
+    spark
+  }
+}
+package com.yjxxt.etl.util
+
+/**
+ * 通用常量类
+ */
+object YjxxtConstants {
+  // Spark 相关常量信息
+  val SPARK_MASTER_LOCAL = "local"
+  val SPARK_MASTER_YARN = "yarn"
+  // 设置时间格式
+  val DATE_FORMAT_PATTERN_YMD = "yyyy-MM-dd"
+  val DATE_FORMAT_PATTERN_YMDHMS = "yyyy-MM-dd HH:mm:ss"
+  // MySQL 相关参数
+  val MYSQL_DRIVER = "com.mysql.cj.jdbc.Driver"
+  val MYSQL_URL = "jdbc:mysql://node01:3306/"
+  val MYSQL_USERNAME = "root"
+  val MYSQL_PASSWORD = "123456"
+  // Redis 相关参数
+  val REDIS_SERVER_HOSTNAME = "node01"
+  val REDIS_SERVER_PORT = 6379
+  val REDIS_SERVER_PASSWORD = "123456"
+}
+pom文件如下：
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.yjxxt</groupId>
+        <artifactId>tydt-offline</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>tydt-offline-etl</artifactId>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <!-- Spark 版本控制 -->
+        <spark.version>3.3.2</spark.version>
+        <!-- Hive 版本控制 -->
+        <hive.version>3.1.2</hive.version>
+        <!-- 统一 Jackson 版本（Spark 3.3.2 适配的 2.13.4） -->
+        <jackson.version>2.13.4</jackson.version>
+    </properties>
+
+    <!-- 强制统一 Jackson 版本（关键：避免依赖传递导致版本不一致） -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.module</groupId>
+                <artifactId>jackson-module-scala_2.12</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Spark Core（排除自带的 Jackson 依赖） -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-core_2.12</artifactId>
+            <version>${spark.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.module</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- Spark SQL（排除自带的 Jackson 依赖） -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql_2.12</artifactId>
+            <version>${spark.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.module</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- Spark Hive（排除自带的 Jackson 依赖） -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-hive_2.12</artifactId>
+            <version>${spark.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.module</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- Hive Exec（排除自带的低版本 Jackson） -->
+        <dependency>
+            <groupId>org.apache.hive</groupId>
+            <artifactId>hive-exec</artifactId>
+            <version>${hive.version}</version>
+            <!-- 为防止与服务器 Hive 资源冲突，打包时设置为 provided -->
+            <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- 显式引入统一版本的 Jackson（解决 ClassNotFoundException） -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-scala_2.12</artifactId>
+        </dependency>
+
+        <!-- 原有业务依赖（保持不变） -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.18</version>
+        </dependency>
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>5.1.3</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.hsr</groupId>
+            <artifactId>geohash</artifactId>
+            <version>1.4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.lionsoul</groupId>
+            <artifactId>ip2region</artifactId>
+            <version>2.7.0</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>tydt-offline-etl</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.7.1</version>
+                <configuration>
+                    <!-- 生成的 jar 包名称中是否追加 appendAssemblyId -->
+                    <appendAssemblyId>false</appendAssemblyId>
+                    <descriptorRefs>
+                        <!-- 将项目依赖的 jar 包打包到当前 jar 包 -->
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
+                <!-- 插件目标列表 -->
+                <executions>
+                    <!-- 将插件目标与生命周期阶段绑定 -->
+                    <execution>
+                        <!-- 插件目标 -->
+                        <goals>
+                            <!-- 只运行一次 -->
+                            <goal>single</goal>
+                        </goals>
+                        <!-- 生命周期阶段 -->
+                        <phase>package</phase>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

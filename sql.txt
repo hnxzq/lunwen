@@ -1,0 +1,3481 @@
+首先是ods层的代码：
+-- 创建 ods 数据库
+CREATE DATABASE IF NOT EXISTS ods;
+
+-- 创建外部分区表
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_app_event_log (
+    account        STRING COMMENT '会员ID',
+    sessionId      STRING COMMENT '会话ID',
+    appId          STRING COMMENT 'AppID',
+    appVersion     STRING COMMENT 'App版本',
+    latitude       DOUBLE COMMENT '纬度',
+    longitude      DOUBLE COMMENT '经度',
+    carrier        STRING COMMENT '运营商',
+    ip             STRING COMMENT 'IP地址',
+    netType        STRING COMMENT '网络类型',
+    osName         STRING COMMENT '手机操作系统',
+    osVersion      STRING COMMENT '手机操作系统版本',
+    resolution     STRING COMMENT '分辨率',
+    deviceId       STRING COMMENT '设备ID',
+    deviceType     STRING COMMENT '设备类型',
+    eventId        STRING COMMENT '事件ID',
+    properties     MAP<STRING,STRING> COMMENT '事件数据',
+    releaseChannel STRING COMMENT '下载渠道',
+    ts             BIGINT COMMENT '事件时间'
+)
+COMMENT 'APP用户行为事件日志表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
+-- 如果源数据 JSON 中的字段与表中不一致，可以通过以下方式进行映射
+-- 将 JSON 数据中的 timestamp 字段解析为表中的 ts 字段
+-- WITH SERDEPROPERTIES ('mapping.ts'='timestamp')
+STORED AS TEXTFILE
+LOCATION '/yjx/app/ods/ods_app_event_log';
+
+-- 添加分区
+ALTER TABLE ods.ods_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-06') LOCATION '/yjx/app/ods/ods_app_event_log/dt=2024-07-06';
+ALTER TABLE ods.ods_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-07') LOCATION '/yjx/app/ods/ods_app_event_log/dt=2024-07-07';
+ALTER TABLE ods.ods_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-08') LOCATION '/yjx/app/ods/ods_app_event_log/dt=2024-07-08';
+ALTER TABLE ods.ods_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-09') LOCATION '/yjx/app/ods/ods_app_event_log/dt=2024-07-09';
+ALTER TABLE ods.ods_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-10') LOCATION '/yjx/app/ods/ods_app_event_log/dt=2024-07-10';
+ALTER TABLE ods.ods_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-11') LOCATION '/yjx/app/ods/ods_app_event_log/dt=2024-07-11';
+ALTER TABLE ods.ods_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-12') LOCATION '/yjx/app/ods/ods_app_event_log/dt=2024-07-12';
+ALTER TABLE ods.ods_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-13') LOCATION '/yjx/app/ods/ods_app_event_log/dt=2024-07-13';
+ALTER TABLE ods.ods_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-14') LOCATION '/yjx/app/ods/ods_app_event_log/dt=2024-07-14';
+ALTER TABLE ods.ods_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-15') LOCATION '/yjx/app/ods/ods_app_event_log/dt=2024-07-15';
+
+-- 查看分区
+SHOW PARTITIONS ods.ods_app_event_log;
+
+-- 查询验证
+SELECT * FROM ods.ods_app_event_log WHERE dt='2024-07-06' LIMIT 5;
+SELECT * FROM ods.ods_app_event_log WHERE dt='2024-07-07' LIMIT 5;
+SELECT * FROM ods.ods_app_event_log WHERE dt='2024-07-08' LIMIT 5;
+SELECT * FROM ods.ods_app_event_log WHERE dt='2024-07-09' LIMIT 5;
+SELECT * FROM ods.ods_app_event_log WHERE dt='2024-07-10' LIMIT 5;
+SELECT * FROM ods.ods_app_event_log WHERE dt='2024-07-11' LIMIT 5;
+SELECT * FROM ods.ods_app_event_log WHERE dt='2024-07-12' LIMIT 5;
+SELECT * FROM ods.ods_app_event_log WHERE dt='2024-07-13' LIMIT 5;
+SELECT * FROM ods.ods_app_event_log WHERE dt='2024-07-14' LIMIT 5;
+SELECT * FROM ods.ods_app_event_log WHERE dt='2024-07-15' LIMIT 5;
+
+SELECT COUNT(*) FROM ods.ods_app_event_log;
+SELECT dt, COUNT(*) FROM ods.ods_app_event_log GROUP BY dt ORDER BY dt;
+
+-- 创建 ods 数据库
+CREATE DATABASE IF NOT EXISTS test;
+
+-- 创建外部分区表
+CREATE EXTERNAL TABLE IF NOT EXISTS test.test_app_event_log (
+    account        STRING COMMENT '会员ID',
+    sessionId      STRING COMMENT '会话ID',
+    appId          STRING COMMENT 'AppID',
+    appVersion     STRING COMMENT 'App版本',
+    latitude       DOUBLE COMMENT '纬度',
+    longitude      DOUBLE COMMENT '经度',
+    carrier        STRING COMMENT '运营商',
+    ip             STRING COMMENT 'IP地址',
+    netType        STRING COMMENT '网络类型',
+    osName         STRING COMMENT '手机操作系统',
+    osVersion      STRING COMMENT '手机操作系统版本',
+    resolution     STRING COMMENT '分辨率',
+    deviceId       STRING COMMENT '设备ID',
+    deviceType     STRING COMMENT '设备类型',
+    eventId        STRING COMMENT '事件ID',
+    properties     MAP<STRING,STRING> COMMENT '事件数据',
+    releaseChannel STRING COMMENT '下载渠道',
+    ts             BIGINT COMMENT '事件时间'
+)
+COMMENT 'APP用户行为事件日志表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
+-- 如果源数据 JSON 中的字段与表中不一致，可以通过以下方式进行映射
+-- 将 JSON 数据中的 timestamp 字段解析为表中的 ts 字段
+-- WITH SERDEPROPERTIES ('mapping.ts'='timestamp')
+LOCATION '/yjx_gzip/app/ods/ods_app_event_log';
+
+-- 添加分区
+ALTER TABLE test.test_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-06') LOCATION '/yjx_gzip/app/ods/ods_app_event_log/dt=2024-07-06';
+ALTER TABLE test.test_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-07') LOCATION '/yjx_gzip/app/ods/ods_app_event_log/dt=2024-07-07';
+ALTER TABLE test.test_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-08') LOCATION '/yjx_gzip/app/ods/ods_app_event_log/dt=2024-07-08';
+ALTER TABLE test.test_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-09') LOCATION '/yjx_gzip/app/ods/ods_app_event_log/dt=2024-07-09';
+ALTER TABLE test.test_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-10') LOCATION '/yjx_gzip/app/ods/ods_app_event_log/dt=2024-07-10';
+ALTER TABLE test.test_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-11') LOCATION '/yjx_gzip/app/ods/ods_app_event_log/dt=2024-07-11';
+ALTER TABLE test.test_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-12') LOCATION '/yjx_gzip/app/ods/ods_app_event_log/dt=2024-07-12';
+ALTER TABLE test.test_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-13') LOCATION '/yjx_gzip/app/ods/ods_app_event_log/dt=2024-07-13';
+ALTER TABLE test.test_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-14') LOCATION '/yjx_gzip/app/ods/ods_app_event_log/dt=2024-07-14';
+ALTER TABLE test.test_app_event_log
+ADD IF NOT EXISTS PARTITION (dt='2024-07-15') LOCATION '/yjx_gzip/app/ods/ods_app_event_log/dt=2024-07-15';
+
+-- 查看分区
+SHOW PARTITIONS test.test_app_event_log;
+
+-- 查询验证
+SELECT * FROM test.test_app_event_log WHERE dt='2024-07-06' LIMIT 5;
+SELECT * FROM test.test_app_event_log WHERE dt='2024-07-07' LIMIT 5;
+SELECT * FROM test.test_app_event_log WHERE dt='2024-07-08' LIMIT 5;
+SELECT * FROM test.test_app_event_log WHERE dt='2024-07-09' LIMIT 5;
+SELECT * FROM test.test_app_event_log WHERE dt='2024-07-10' LIMIT 5;
+SELECT * FROM test.test_app_event_log WHERE dt='2024-07-11' LIMIT 5;
+SELECT * FROM test.test_app_event_log WHERE dt='2024-07-12' LIMIT 5;
+SELECT * FROM test.test_app_event_log WHERE dt='2024-07-13' LIMIT 5;
+SELECT * FROM test.test_app_event_log WHERE dt='2024-07-14' LIMIT 5;
+SELECT * FROM test.test_app_event_log WHERE dt='2024-07-15' LIMIT 5;
+
+SELECT COUNT(*) FROM test.test_app_event_log;
+SELECT dt, COUNT(*) FROM test.test_app_event_log GROUP BY dt ORDER BY dt;
+
+DROP TABLE IF EXISTS ods.ods_yjx_goods_full;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_goods_full (
+    id                  BIGINT COMMENT '商品ID',
+    create_time         STRING COMMENT '创建时间',
+    delete_flag         STRING COMMENT '删除标志 true/false 删除/未删除',
+    auth_message        STRING COMMENT '审核信息',
+    brand_id            STRING COMMENT '品牌ID',
+    category_path       STRING COMMENT '分类路径',
+    cost                STRING COMMENT '成本价格',
+    goods_name          STRING COMMENT '商品名称',
+    goods_unit          STRING COMMENT '计量单位',
+    goods_video         STRING COMMENT '商品视频',
+    intro               STRING COMMENT '商品详情',
+    is_auth             STRING COMMENT '审核状态',
+    market_enable       STRING COMMENT '上架状态',
+    mobile_intro        STRING COMMENT '商品移动端详情',
+    original            STRING COMMENT '原图路径',
+    price               STRING COMMENT '商品价格',
+    sales_model         STRING COMMENT '销售模式',
+    self_operated       STRING COMMENT '是否自营',
+    store_id            STRING COMMENT '店铺ID',
+    selling_point       STRING COMMENT '卖点',
+    shop_category_path  STRING COMMENT '店铺分类',
+    sn                  STRING COMMENT '商品编号',
+    under_message       STRING COMMENT '下架原因',
+    weight              STRING COMMENT '重量',
+    store_category_path STRING COMMENT '店铺分类路径',
+    params              STRING COMMENT '参数',
+    goods_type          STRING COMMENT '商品类别'
+)
+COMMENT '商品信息表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_goods_full';
+
+DROP TABLE IF EXISTS ods.ods_yjx_goods_collection_inc;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_goods_collection_inc (
+    id          BIGINT COMMENT 'ID',
+    create_time STRING COMMENT '创建时间',
+    member_id   STRING COMMENT '会员ID',
+    sku_id      STRING COMMENT '商品ID'
+)
+COMMENT '商品收藏表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_goods_collection_inc';
+
+DROP TABLE IF EXISTS ods.ods_yjx_goods_sku_full;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_goods_sku_full (
+    id                  BIGINT COMMENT '商品skuID',
+    create_time         STRING COMMENT '创建时间',
+    delete_flag         STRING COMMENT '删除标志 true/false 删除/未删除',
+    auth_message        STRING COMMENT '审核信息',
+    brand_id            STRING COMMENT '品牌ID',
+    category_path       STRING COMMENT '分类路径',
+    cost                STRING COMMENT '成本价格',
+    freight_payer       STRING COMMENT '运费承担者',
+    goods_id            STRING COMMENT '商品ID',
+    goods_name          STRING COMMENT '商品名称',
+    goods_unit          STRING COMMENT '计量单位',
+    goods_video         STRING COMMENT '商品视频',
+    intro               STRING COMMENT '商品详情',
+    is_auth             STRING COMMENT '审核状态',
+    is_promotion        STRING COMMENT '是否是促销商品',
+    promotion_price     STRING COMMENT '促销价',
+    market_enable       STRING COMMENT '上架状态',
+    mobile_intro        STRING COMMENT '商品移动端详情',
+    original            STRING COMMENT '原图路径',
+    price               STRING COMMENT '商品价格',
+    sales_model         STRING COMMENT '销售模式',
+    self_operated       STRING COMMENT '是否自营',
+    store_id            STRING COMMENT '店铺ID',
+    selling_point       STRING COMMENT '卖点',
+    sn                  STRING COMMENT '商品编号',
+    specs               STRING COMMENT '规格json',
+    simple_specs        STRING COMMENT '规格信息',
+    store_category_path STRING COMMENT '店铺分类路径',
+    goods_type          STRING COMMENT '商品类别',
+    weight              STRING COMMENT '重量',
+    under_message       STRING COMMENT '下架原因'
+)
+COMMENT '商品 SKU 表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_goods_sku_full';
+
+DROP TABLE IF EXISTS ods.ods_yjx_member_full;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_member_full (
+    id              BIGINT COMMENT '会员用户ID',
+    create_time     STRING COMMENT '创建时间',
+    delete_flag     STRING COMMENT '删除标志 true/false 删除/未删除',
+    birthday        STRING COMMENT '会员生日',
+    disabled        INT COMMENT '会员状态',
+    face            STRING COMMENT '会员头像',
+    have_store      INT COMMENT '是否开通店铺',
+    mobile          BIGINT COMMENT '手机号码',
+    nick_name       STRING COMMENT '会员昵称',
+    password        STRING COMMENT '会员密码',
+    sex             STRING COMMENT '会员性别',
+    username        STRING COMMENT '会员用户名',
+    region          STRING COMMENT '会员地址',
+    region_id       STRING COMMENT '会员地址ID',
+    client_enum     STRING COMMENT '客户端',
+    last_login_date STRING COMMENT '最后一次登录时间'
+)
+COMMENT '用户信息表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_member_full';
+
+DROP TABLE IF EXISTS ods.ods_yjx_member_grade_full;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_member_grade_full (
+    id          BIGINT COMMENT 'ID',
+    grade_image STRING COMMENT '等级图像',
+    grade_name  STRING COMMENT '等级名',
+    is_default  STRING COMMENT '是否有效'
+)
+COMMENT '用户会员等级信息表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_member_grade_full';
+
+DROP TABLE IF EXISTS ods.ods_yjx_order_inc;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_order_inc (
+    id                        BIGINT COMMENT 'ID',
+    create_time               STRING COMMENT '创建时间',
+    update_time               STRING COMMENT '修改时间',
+    can_return                STRING COMMENT '订单是否支持原路退回',
+    cancel_reason             STRING COMMENT '订单取消原因',
+    client_type               STRING COMMENT '订单来源',
+    complete_time             STRING COMMENT '完成时间',
+    consignee_address_id_path STRING COMMENT '地址ID逗号分割',
+    consignee_address_path    STRING COMMENT '地址名称逗号分割',
+    consignee_detail          STRING COMMENT '详细地址',
+    consignee_mobile          STRING COMMENT '收件人手机',
+    consignee_name            STRING COMMENT '收件人姓名',
+    deliver_status            STRING COMMENT '货运状态',
+    discount_price            STRING COMMENT '优惠金额',
+    flow_price                STRING COMMENT '总价格',
+    freight_price             STRING COMMENT '运费',
+    goods_num                 STRING COMMENT '商品数量',
+    goods_price               STRING COMMENT '商品价格',
+    logistics_code            STRING COMMENT '物流公司CODE',
+    logistics_name            STRING COMMENT '物流公司名称',
+    logistics_no              STRING COMMENT '发货单号',
+    logistics_time            STRING COMMENT '送货时间',
+    member_id                 STRING COMMENT '会员ID',
+    need_receipt              STRING COMMENT '是否需要发票',
+    order_status              STRING COMMENT '订单状态',
+    order_type                STRING COMMENT '订单类型',
+    parent_order_sn           STRING COMMENT '是否为其他订单下的订单，如果是则为依赖订单的sn，否则为空',
+    pay_order_no              STRING COMMENT '支付方式返回的交易号',
+    pay_status                STRING COMMENT '付款状态',
+    payment_method            STRING COMMENT '支付方式',
+    payment_time              STRING COMMENT '支付时间',
+    price_detail              STRING COMMENT '价格详情',
+    promotion_id              STRING COMMENT '是否为某订单类型的订单，如果是则为订单类型的id，否则为空',
+    remark                    STRING COMMENT '买家订单备注',
+    store_id                  STRING COMMENT '店铺ID',
+    sn                        STRING COMMENT '订单编号',
+    trade_sn                  STRING COMMENT '交易编号 关联Trade',
+    weight                    STRING COMMENT '订单商品总重量',
+    qr_code                   STRING COMMENT '提货码',
+    distribution_id           STRING COMMENT '分销商ID',
+    delivery_method           STRING COMMENT '配送方式'
+)
+COMMENT '订单信息表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_order_inc'
+
+DROP TABLE IF EXISTS ods.ods_yjx_order_item_inc;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_order_item_inc (
+    id                STRING COMMENT 'ID',
+    create_time       STRING COMMENT '创建时间',
+    after_sale_status STRING COMMENT '售后状态',
+    category_id       STRING COMMENT '分类ID',
+    comment_status    STRING COMMENT '评论状态',
+    complain_id       STRING COMMENT '交易投诉ID',
+    complain_status   STRING COMMENT '投诉状态',
+    flow_price        STRING COMMENT '实际金额',
+    goods_price       STRING COMMENT '销售金额',
+    goods_id          STRING COMMENT '商品ID',
+    image             STRING COMMENT '图片',
+    goods_name        STRING COMMENT '商品名称',
+    num               STRING COMMENT '销售量',
+    order_sn          STRING COMMENT '订单编号',
+    price_detail      STRING COMMENT '价格详情',
+    sku_id            STRING COMMENT '货品ID',
+    sn                STRING COMMENT '子订单编号',
+    specs             STRING COMMENT '规格json',
+    trade_sn          STRING COMMENT '交易编号',
+    unit_price        STRING COMMENT '单价',
+    sub_total         STRING COMMENT '小记'
+)
+COMMENT '订单明细表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_order_item_inc';
+
+DROP TABLE IF EXISTS ods.ods_yjx_order_complaint_inc;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_order_complaint_inc (
+    id                     BIGINT COMMENT 'ID',
+    create_time            STRING COMMENT '创建时间',
+    appeal_content         STRING COMMENT '申诉商家内容',
+    appeal_images          STRING COMMENT '申诉商家上传的图片',
+    appeal_time            STRING COMMENT '申诉商家时间',
+    arbitration_result     STRING COMMENT '仲裁结果',
+    complain_status        STRING COMMENT '交易投诉状态',
+    complain_topic         STRING COMMENT '投诉主题',
+    consignee_address_path STRING COMMENT '收货地址',
+    consignee_mobile       STRING COMMENT '收件人手机',
+    consignee_name         STRING COMMENT '收件人姓名',
+    content                STRING COMMENT '投诉内容',
+    freight_price          STRING COMMENT '运费',
+    goods_id               STRING COMMENT '商品ID',
+    goods_image            STRING COMMENT '商品图片',
+    goods_name             STRING COMMENT '商品名称',
+    goods_price            STRING COMMENT '商品价格',
+    images                 STRING COMMENT '投诉凭证图片',
+    logistics_no           STRING COMMENT '发货单号',
+    member_id              STRING COMMENT '会员ID',
+    num                    STRING COMMENT '购买的商品数量',
+    order_price            STRING COMMENT '订单金额',
+    order_sn               STRING COMMENT '订单编号',
+    order_time             STRING COMMENT '下单时间',
+    store_id               STRING COMMENT '店铺ID',
+    sku_id                 STRING COMMENT '货品ID'
+)
+COMMENT '订单申述表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_order_complaint_inc';
+
+
+DROP TABLE IF EXISTS ods.ods_yjx_store_full;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_store_full (
+    id                    BIGINT COMMENT '店铺ID',
+    create_time           STRING COMMENT '创建时间',
+    member_id             STRING COMMENT '会员ID',
+    member_name           STRING COMMENT '会员名称',
+    self_operated         STRING COMMENT '是否自营',
+    store_disable         STRING COMMENT '店铺状态',
+    store_end_time        STRING COMMENT '店铺关闭时间',
+    store_logo            STRING COMMENT '店铺logo',
+    store_name            STRING COMMENT '店铺名称',
+    store_address_detail  STRING COMMENT '详细地址',
+    store_address_id_path STRING COMMENT '地址ID',
+    store_address_path    STRING COMMENT '地址名称',
+    store_desc            STRING COMMENT '店铺简介'
+)
+COMMENT '店铺信息表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_store_full';
+
+DROP TABLE IF EXISTS ods.ods_yjx_store_address_full;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_store_address_full (
+    store_id     BIGINT COMMENT '店铺ID',
+    create_time  STRING COMMENT '创建时间',
+    update_time  STRING COMMENT '修改时间',
+    mobile       STRING COMMENT '电话',
+    address      STRING COMMENT '地址',
+    address_name STRING COMMENT '自提点名称'
+)
+COMMENT '店铺地址信息表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_store_address_full';
+
+DROP TABLE IF EXISTS ods.ods_yjx_store_collection_full;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_store_collection_full (
+    store_id  BIGINT COMMENT '店铺ID',
+    member_id BIGINT COMMENT '会员ID'
+)
+COMMENT '店铺收藏信息表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_store_collection_full';
+
+DROP TABLE IF EXISTS ods.ods_yjx_store_logistics_full;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_store_logistics_full (
+    store_id     BIGINT COMMENT '店铺ID',
+    logistics_id BIGINT COMMENT '物流公司ID'
+)
+COMMENT '店铺物流信息表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_store_logistics_full';
+
+DROP TABLE IF EXISTS ods.ods_yjx_cart_info_inc;
+CREATE EXTERNAL TABLE ods.ods_yjx_cart_info_inc (
+    id           STRING COMMENT '编号',
+    member_id    STRING COMMENT '用户ID',
+    sku_id       STRING COMMENT 'sku_id',
+    cart_price   DECIMAL(16, 2) COMMENT '放入购物车时价格',
+    sku_num      BIGINT COMMENT '数量',
+    img_url      STRING COMMENT '商品图片地址',
+    sku_name     STRING COMMENT 'sku名称 (冗余)',
+    is_checked   STRING COMMENT '是否被选中',
+    create_time  STRING COMMENT '创建时间',
+    operate_time STRING COMMENT '修改时间',
+    is_ordered   STRING COMMENT '是否已经下单',
+    order_time   STRING COMMENT '下单时间',
+    source_type  STRING COMMENT '来源类型',
+    source_id    STRING COMMENT '来源编号'
+)
+COMMENT '购物车信息表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_cart_info_inc';
+
+DROP TABLE IF EXISTS ods.ods_yjx_coupon_info_full;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_coupon_info_full (
+    id               STRING COMMENT '购物券编号',
+    coupon_name      STRING COMMENT '购物券名称',
+    coupon_type      STRING COMMENT '购物券类型（3201满减券、3202满件打折券、3203现金券、3204折扣券）',
+    condition_amount DECIMAL(16, 2) COMMENT '满额数',
+    condition_num    BIGINT COMMENT '满件数',
+    activity_id      STRING COMMENT '活动编号',
+    benefit_amount   DECIMAL(16, 2) COMMENT '减金额',
+    benefit_discount DECIMAL(16, 2) COMMENT '折扣',
+    create_time      STRING COMMENT '创建时间',
+    range_type       STRING COMMENT '范围类型（3301品类券、3302品牌券、3303单品SPU券）',
+    limit_num        BIGINT COMMENT '最多领用次数',
+    taken_count      BIGINT COMMENT '已领用次数',
+    start_time       STRING COMMENT '开始领取时间',
+    end_time         STRING COMMENT '结束领取时间',
+    operate_time     STRING COMMENT '修改时间',
+    expire_time      STRING COMMENT '过期时间'
+)
+COMMENT '优惠券信息表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_coupon_info_full';
+
+DROP TABLE IF EXISTS ods.ods_yjx_coupon_use_inc;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_coupon_use_inc (
+    id            STRING COMMENT '编号',
+    coupon_id     STRING COMMENT '优惠券编号',
+    member_id     STRING COMMENT '用户编号',
+    order_sn      STRING COMMENT '订单编号',
+    coupon_status STRING COMMENT '优惠券状态（1：未使用 2：已使用）',
+    get_time      STRING COMMENT '获取时间',
+    using_time    STRING COMMENT '使用时间',
+    used_time     STRING COMMENT '支付时间',
+    expire_time   STRING COMMENT '过期时间'
+)
+COMMENT '优惠券领用表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_coupon_use_inc';
+
+DROP TABLE IF EXISTS ods.ods_yjx_dic_full;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_dic_full (
+    dic_code     STRING COMMENT '编号',
+    dic_name     STRING COMMENT '编码名称',
+    parent_code  STRING COMMENT '父编号',
+    create_time  STRING COMMENT '创建日期',
+    operate_time STRING COMMENT '修改日期'
+)
+COMMENT '数据字典表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_dic_full';
+
+DROP TABLE IF EXISTS ods.ods_yjx_category_full;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_category_full (
+    id              BIGINT COMMENT '分类ID',
+    commission_rate STRING COMMENT '佣金比例',
+    image           STRING COMMENT '分类图标',
+    level           STRING COMMENT '层级',
+    name            STRING COMMENT '分类名称',
+    parent_id       STRING COMMENT '父ID',
+    sort_order      STRING COMMENT '排序值'
+)
+COMMENT '商品分类表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_category_full';
+
+DROP TABLE IF EXISTS ods.ods_yjx_brand_full;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_brand_full (
+    id   STRING COMMENT '品牌ID',
+    logo STRING COMMENT '品牌图标',
+    name STRING COMMENT '品牌名'
+)
+COMMENT '商品品牌表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_brand_full';
+
+DROP TABLE IF EXISTS ods.ods_yjx_goods_unit_full;
+CREATE EXTERNAL TABLE IF NOT EXISTS ods.ods_yjx_goods_unit_full (
+    id          BIGINT COMMENT '计量单位ID',
+    create_time STRING COMMENT '创建时间',
+    delete_flag STRING COMMENT '删除标志 true/false 删除/未删除',
+    name        STRING COMMENT '计量单位名称'
+)
+COMMENT '商品计量单位编码表'
+PARTITIONED BY (dt STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+LINES TERMINATED BY '\n'
+NULL DEFINED AS ''
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ods/ods_yjx_goods_unit_full';
+
+然后是dim的代码：
+CREATE DATABASE IF NOT EXISTS dim;
+CREATE EXTERNAL TABLE IF NOT EXISTS dim.dim_area_dict (
+    geohash  STRING,
+    province STRING COMMENT '省',
+    city     STRING COMMENT '市',
+    region   STRING COMMENT '县（区）'
+)
+COMMENT '地理位置维度表'
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dim/dim_area_dict';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dim.dim_coupon_full (
+    id               STRING COMMENT '购物券编号',
+    coupon_name      STRING COMMENT '购物券名称',
+    coupon_type_code STRING COMMENT '购物券类型编码',
+    coupon_type_name STRING COMMENT '购物券类型名称：',
+    condition_amount DECIMAL(16, 2) COMMENT '满额数，例如满x元减x元',
+    condition_num    BIGINT COMMENT '满件数，例如满x件打x折',
+    activity_id      STRING COMMENT '活动编号',
+    benefit_amount   DECIMAL(16, 2) COMMENT '减金额，例如减x元',
+    benefit_discount DECIMAL(16, 2) COMMENT '折扣，例如打x折',
+    benefit_rule     STRING COMMENT '优惠规则，例如满x元减x元，满x件打x折，减x元，打x折',
+    create_time      STRING COMMENT '创建时间',
+    range_type_code  STRING COMMENT '优惠范围类型编码',
+    range_type_name  STRING COMMENT '优惠范围类型名称：',
+    limit_num        BIGINT COMMENT '最多领取次数',
+    taken_count      BIGINT COMMENT '已领取次数',
+    start_time       STRING COMMENT '可以领取的开始日期',
+    end_time         STRING COMMENT '可以领取的结束日期',
+    operate_time     STRING COMMENT '修改时间',
+    expire_time      STRING COMMENT '过期时间'
+)
+COMMENT '优惠券维度表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dim/dim_coupon_full';
+
+-- 根据日期每天增量拉取
+INSERT INTO TABLE dim.dim_coupon_full PARTITION (dt = '2024-07-06')
+SELECT
+    a.id, -- 购物券编号
+    a.coupon_name, -- 购物券名称
+    a.coupon_type AS coupon_type_code, -- 购物券类型编码
+    b.dic_name AS coupon_type_name, -- 购物券类型名称（3201满减券、3202满件打折券、3203现金券、3204折扣券）
+    a.condition_amount, -- 满额数，例如满x元减x元
+    a.condition_num, -- 满件数，例如满x件打x折
+    a.activity_id, -- 活动编号
+    a.benefit_amount, -- 减金额，例如减x元
+    a.benefit_discount, -- 折扣，例如打x折
+    CASE a.coupon_type
+       WHEN '3201' THEN CONCAT('满', condition_amount, '元，减', benefit_amount, "元")
+       WHEN '3202' THEN CONCAT('满', condition_num, '件，打', 10 * (1 - benefit_discount), "折")
+       WHEN '3203' THEN CONCAT('减', benefit_amount, "元")
+       WHEN '3204' THEN CONCAT('打', 10 * (1 - benefit_discount), "折")
+       END AS benefit_rule, -- 优惠规则，例如满x元减x元，满x件打x折，减x元，打x折
+    a.create_time, -- 创建时间
+    a.range_type AS range_type_code, -- 优惠范围类型编码
+    c.dic_name AS range_type_name, -- 优惠范围类型名称（3301品类券、3302品牌券、3303单品SPU券）
+    a.limit_num, -- 最多领取次数
+    a.taken_count, -- 已领取次数
+    a.start_time, -- 可以领取的开始日期
+    a.end_time, -- 可以领取的结束日期
+    a.operate_time, -- 修改时间
+    a.expire_time -- 过期时间
+FROM (
+    -- 谓词下推处理
+    SELECT
+        id, -- 购物券编号
+        coupon_name, -- 购物券名称
+        coupon_type, -- 购物券类型编码
+        condition_amount, -- 满额数
+        condition_num, -- 满件数
+        activity_id, -- 活动编号
+        benefit_amount, -- 减金额
+        benefit_discount, -- 折扣
+        create_time, -- 创建时间
+        range_type, -- 优惠范围类型编码
+        limit_num, -- 最多领取次数
+        taken_count, -- 已领取次数
+        start_time, -- 可以领取的开始日期
+        end_time, -- 可以领取的结束日期
+        operate_time, -- 修改时间
+        expire_time -- 过期时间
+    FROM ods.ods_yjx_coupon_info_full
+    WHERE dt = '2024-07-06'
+) a
+LEFT JOIN (
+    -- 谓词下推处理
+    SELECT
+        dic_code, -- 编码（购物券类型编码）
+        dic_name -- 编码名称（购物券类型编码名称）
+    FROM ods.ods_yjx_dic_full
+    WHERE dt = '2024-07-06' AND parent_code = '32' -- 32：购物券类型
+) b ON a.coupon_type = b.dic_code
+LEFT JOIN (
+    -- 谓词下推处理
+    SELECT
+        dic_code, -- 编码（优惠范围类型编码）
+        dic_name -- 编码名称（优惠范围类型编码名称）
+    FROM ods.ods_yjx_dic_full
+    WHERE dt = '2024-07-06' AND parent_code = '33' -- 33：优惠券范围
+) c ON a.range_type = c.dic_code;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dim.dim_guid_dict (
+    id_hashcode STRING COMMENT 'ID标识的HASH值',
+    id          STRING COMMENT 'ID标识',
+    guid        STRING COMMENT '一个连通图的最小HASH值'
+)
+COMMENT '用户全局唯一标识维度表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dim/dim_guid_dict';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dim.dim_sku_full (
+    id             STRING COMMENT 'SKU ID',
+    sku_name       STRING COMMENT '商品名称',
+    goods_id       STRING COMMENT '商品ID',
+    brand_id       STRING COMMENT '品牌ID',
+    brand_name     STRING COMMENT '品牌名称',
+    category1_id   STRING COMMENT '一级商品分类ID',
+    category1_name STRING COMMENT '一级商品分类名称',
+    category2_id   STRING COMMENT '二级商品分类ID',
+    category2_name STRING COMMENT '二级商品分类名称',
+    category3_id   STRING COMMENT '三级商品分类ID',
+    category3_name STRING COMMENT '三级商品分类名称',
+    sku_price      DECIMAL(16, 2) COMMENT '商品价格'
+)
+COMMENT '商品 SKU 维度表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dim/dim_sku_full';
+
+-- 根据日期每天增量拉取
+WITH sku AS (
+    SELECT
+        id,
+        goods_name AS sku_name,
+        goods_id,
+        category_id,
+        brand_id,
+        price
+    FROM ods.ods_yjx_goods_sku_full
+    LATERAL VIEW EXPLODE(SPLIT(category_path, ',')) c AS category_id
+    WHERE dt = '2024-07-06' AND id IS NOT NULL
+),
+brand AS (
+    SELECT
+        id,
+        name
+    FROM ods.ods_yjx_brand_full
+    WHERE dt = '2024-07-06'
+),
+category AS (
+    SELECT
+        CAST(id AS STRING) AS id,
+        name,
+        level
+    FROM ods.ods_yjx_category_full
+    WHERE dt = '2024-07-06'
+)
+INSERT INTO TABLE dim.dim_sku_full PARTITION (dt = '2024-07-06')
+SELECT
+    sku.id,
+    sku.sku_name,
+    sku.goods_id,
+    sku.brand_id,
+    brand.name AS                                              brand_name,
+    MAX(CASE WHEN category.level = 0 THEN sku.category_id END) category1_id,
+    MAX(CASE WHEN category.level = 0 THEN category.name END)   category1_name,
+    MAX(CASE WHEN category.level = 1 THEN sku.category_id END) category2_id,
+    MAX(CASE WHEN category.level = 1 THEN category.name END)   category2_name,
+    MAX(CASE WHEN category.level = 2 THEN sku.category_id END) category3_id,
+    MAX(CASE WHEN category.level = 2 THEN category.name END)   category3_name,
+    CAST(sku.price AS DECIMAL(16, 2))                          sku_price
+FROM sku
+LEFT JOIN brand ON sku.brand_id = brand.id
+LEFT JOIN category ON sku.category_id = category.id
+WHERE sku.sku_name IS NOT NULL
+GROUP BY sku.id, sku.sku_name, sku.brand_id, sku.goods_id, brand.name, sku.price;
+
+然后是dwd的代码：
+CREATE EXTERNAL TABLE IF NOT EXISTS dwd.dwd_app_event_detail (
+    account          STRING COMMENT '会员ID',
+    appId            STRING COMMENT 'AppID',
+    appVersion       STRING COMMENT 'App版本',
+    carrier          STRING COMMENT '运营商',
+    deviceId         STRING COMMENT '设备ID',
+    deviceType       STRING COMMENT '设备类型',
+    eventId          STRING COMMENT '事件ID',
+    ip               STRING COMMENT 'IP地址',
+    latitude         DOUBLE COMMENT '纬度',
+    longitude        DOUBLE COMMENT '经度',
+    netType          STRING COMMENT '网络类型',
+    osName           STRING COMMENT '手机操作系统',
+    osVersion        STRING COMMENT '手机操作系统版本',
+    properties       MAP<STRING,STRING> COMMENT '事件数据',
+    resolution       STRING COMMENT '分辨率',
+    sessionId        STRING COMMENT '会话ID',
+    ts               BIGINT COMMENT '事件时间',
+    splitSessionId   STRING COMMENT '分割SessionID',
+    province         STRING COMMENT '省',
+    city             STRING COMMENT '市',
+    region           STRING COMMENT '县（区）',
+    filledAccount    STRING COMMENT '回填账户',
+    guid             BIGINT COMMENT '全局用户唯一标识',
+    isNew            INT COMMENT '是否新用户，1 为新用户，0 为老用户'
+)
+COMMENT '全局用户行为事件明细事实表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dwd/dwd_app_event_detail';
+
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dwd.dwd_coupon_get_inc (
+    id        STRING COMMENT '编号',
+    coupon_id STRING COMMENT '优惠券ID',
+    member_id STRING COMMENT '用户ID',
+    get_time  STRING COMMENT '领取时间',
+    order_sn  STRING COMMENT '订单编号',
+    used_time STRING COMMENT '使用时间'
+)
+COMMENT '优惠券领取事务事实表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dwd/dwd_coupon_get_inc';
+
+-- 根据日期每天增量拉取
+INSERT OVERWRITE TABLE dwd.dwd_coupon_get_inc PARTITION (dt = '2024-07-06')
+SELECT
+    id,
+    coupon_id,
+    member_id,
+    get_time,
+    order_sn,
+    used_time
+FROM ods.ods_yjx_coupon_use_inc
+WHERE dt = '2024-07-06';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dwd.dwd_coupon_order_inc (
+    id        STRING COMMENT '编号',
+    coupon_id STRING COMMENT '优惠券ID',
+    member_id STRING COMMENT '用户ID',
+    order_sn  STRING COMMENT '订单编号',
+    used_time STRING COMMENT '下单使用时间'
+)
+COMMENT '优惠券下单使用事务事实表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dwd/dwd_coupon_order_inc';
+
+-- 根据日期每天增量拉取
+INSERT OVERWRITE TABLE dwd.dwd_coupon_order_inc PARTITION (dt='2024-07-06')
+SELECT
+    id,
+    coupon_id,
+    member_id,
+    order_sn,
+    used_time
+FROM ods.ods_yjx_coupon_use_inc
+WHERE dt = '2024-07-06' AND used_time >= '2024-07-06' AND used_time < date_add('2024-07-06', 1);
+
+-- 创建数据库与数据表
+CREATE DATABASE IF NOT EXISTS dwd;
+CREATE EXTERNAL TABLE IF NOT EXISTS dwd.dwd_device_account_bind_score (
+    deviceId   STRING COMMENT '设备',
+    account    STRING COMMENT '账号',
+    score      DOUBLE COMMENT '评分',
+    last_login STRING COMMENT '最后一次登录时间'
+)
+COMMENT '设备账号绑定评分表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression' = 'SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dwd/dwd_device_account_bind_score';
+
+-- false 表示关闭 SparkSQL 的 Parquet 文件解析器，使用 Hive 的 Parquet 文件解析器
+SET spark.sql.hive.convertMetastoreParquet=false;
+
+-- 根据条件查询 ods.ods_app_event_log 表，并创建临时视图
+WITH v_event_log AS (
+    SELECT
+        deviceId,
+        IF(account = '', 'null', account) AS account,
+        sessionId,
+        ts
+    FROM ods.ods_app_event_log
+    WHERE dt = '2024-07-06' AND deviceId IS NOT NULL AND sessionId IS NOT NULL
+),
+-- 计算每一台“设备-账号”的会话分数
+v_combine_session_cur AS (
+    SELECT
+        deviceId,
+        account,
+        COUNT(*) * 100 AS score,
+        MAX(ts) AS last_login
+    FROM v_event_log
+    GROUP BY deviceId, account
+),
+-- 获取前一日的设备账号绑定评分表数据
+v_combine_session_prev AS (
+    SELECT * FROM dwd.dwd_device_account_bind_score WHERE dt='2024-07-05'
+)
+INSERT OVERWRITE TABLE dwd.dwd_device_account_bind_score PARTITION(dt='2024-07-06')
+SELECT
+NVL(cur.deviceId, prev.deviceId) AS deviceId,
+NVL(cur.account, prev.account) AS account,
+CASE
+    -- T-1 日（昨日设备账号绑定评分表）出现的组合，T 日（当前设备账号绑定评分表）没有出现，做 Score 衰减
+    WHEN prev.score IS NOT NULL AND cur.score IS NULL THEN prev.score * 0.6
+    -- T-1 日（昨日设备账号绑定评分表）出现的组合，T 日（当前设备账号绑定评分表）也出现，做 Score 累加
+    WHEN prev.score IS NOT NULL AND cur.score IS NOT NULL THEN prev.score + cur.score
+    -- T-1 日（昨日设备账号绑定评分表）没出现的组合，T 日（当前设备账号绑定评分表）出现，取 T 日的 Score
+    WHEN prev.score IS NULL AND cur.score IS NOT NULL THEN cur.score
+END AS score,
+NVL(cur.last_login, prev.last_login) last_login
+FROM v_combine_session_cur cur
+FULL JOIN v_combine_session_prev prev ON cur.deviceId = prev.deviceId
+    AND IF(cur.account=null, '', cur.account) = IF(prev.account=null, '', prev.account);
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dwd.dwd_user_dau (
+    guid         BIGINT COMMENT '全局用户唯一标识',
+    isNew        INT COMMENT '新老用户标识',
+    first_acc_dt STRING COMMENT '用户第一次访问的时间，使用设备匿名的第一次访问或者登录账号的第一次访问'
+)
+COMMENT '用户日活表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dwd/dwd_user_dau';
+
+-- 根据日期每天增量拉取计算
+INSERT OVERWRITE TABLE dwd.dwd_user_dau PARTITION (dt = '2024-07-06')
+SELECT
+    DISTINCT a.guid,
+    a.isNew,
+    IF(a.isNew=1, a.dt, b.first_acc_dt) AS first_acc_dt
+FROM dwd.dwd_app_event_detail a
+LEFT JOIN dwd.dwd_user_register b ON a.guid = b.guid
+WHERE a.guid > 0 AND a.dt = '2024-07-06';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dwd.dwd_user_register (
+    guid         BIGINT COMMENT '全局用户唯一标识',
+    first_acc_dt STRING COMMENT '用户第一次访问的时间，使用设备匿名的第一次访问或者登录账号的第一次访问'
+)
+COMMENT '新用户表'
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dwd/dwd_user_register';
+
+-- 根据日期每天增量拉取计算
+INSERT INTO TABLE dwd.dwd_user_register
+SELECT guid, dt
+FROM dwd.dwd_app_event_detail
+WHERE isNew = 1 AND guid > 0 AND dt='2024-07-07'
+GROUP BY guid, dt;
+
+select * from dwd.dwd_user_register where first_acc_dt = '2024-07-07';
+CREATE EXTERNAL TABLE IF NOT EXISTS dwd.dwd_yjx_cart_inc (
+    id        STRING COMMENT '编号',
+    member_id STRING COMMENT '用户ID', -- 用户维度
+    sku_id    STRING COMMENT '商品ID', -- 商品维度
+    sku_name  STRING COMMENT '商品名称', -- 维度退化
+    sku_num   BIGINT COMMENT '加购物车件数' -- 度量值
+)
+COMMENT '购物车周期快照事实表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dwd/dwd_yjx_cart_inc';
+
+-- 根据日期每天增量拉取
+INSERT INTO TABLE dwd.dwd_yjx_cart_inc PARTITION (dt = '2024-07-06')
+SELECT
+    id,
+    member_id,
+    sku_id,
+    sku_name,
+    sku_num
+FROM ods.ods_yjx_cart_info_inc
+WHERE dt = '2024-07-06';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dwd.dwd_yjx_goods_collection_inc (
+    id          BIGINT COMMENT 'ID',
+    create_time STRING COMMENT '创建时间',
+    member_id   STRING COMMENT '会员ID',
+    sku_id      STRING COMMENT '商品ID'
+)
+COMMENT '商品收藏事务事实表'
+PARTITIONED BY (dt string)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dwd/dwd_yjx_goods_collection_inc';
+
+-- 根据日期每天增量拉取
+INSERT INTO TABLE dwd.dwd_yjx_goods_collection_inc PARTITION (dt = '2024-07-06')
+SELECT id, create_time, member_id, sku_id
+FROM ods.ods_yjx_goods_collection_inc
+WHERE dt = '2024-07-06';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dwd.dwd_yjx_goods_full (
+    id                  BIGINT COMMENT '商品ID',
+    create_time         STRING COMMENT '创建时间',
+    delete_flag         STRING COMMENT '删除标志 true/false 删除/未删除',
+    auth_message        STRING COMMENT '审核信息',
+    brand_id            STRING COMMENT '品牌ID',
+    category1_id        STRING COMMENT '一级分类',
+    category2_id        STRING COMMENT '二级分类',
+    category3_id        STRING COMMENT '三级分类',
+    cost                STRING COMMENT '售价',
+    goods_name          STRING COMMENT '商品名称',
+    goods_unit          STRING COMMENT '计量单位',
+    goods_video         STRING COMMENT '商品视频',
+    intro               STRING COMMENT '商品详情',
+    is_auth             STRING COMMENT '审核状态',
+    market_enable       STRING COMMENT '上架状态',
+    mobile_intro        STRING COMMENT '商品移动端详情',
+    original            STRING COMMENT '原图路径',
+    price               STRING COMMENT '成本价格',
+    sales_model         STRING COMMENT '销售模式',
+    self_operated       STRING COMMENT '是否自营',
+    store_id            STRING COMMENT '店铺ID',
+    selling_point       STRING COMMENT '卖点',
+    shop_category_path  STRING COMMENT '店铺分类',
+    sn                  STRING COMMENT '商品编号',
+    under_message       STRING COMMENT '下架原因',
+    weight              STRING COMMENT '重量',
+    store_category_path STRING COMMENT '店铺分类路径',
+    params              STRING COMMENT '参数',
+    goods_type          STRING COMMENT '商品类别'
+)
+COMMENT '商品明细事务事实表'
+PARTITIONED BY (dt String)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dwd/dwd_yjx_goods_full';
+
+-- DataX 每天全量拉取 MySQL 的 yjx_goods 表数据并按日期分区将全量数据插入 ODS 表
+-- DWD 也根据日期分区，将 ODS 表数据按日期拉取并插入
+INSERT INTO TABLE dwd.dwd_yjx_goods_full PARTITION (dt = '2024-07-06')
+SELECT
+    id,
+    create_time,
+    delete_flag,
+    auth_message,
+    brand_id,
+    SPLIT(category_path, ',')[0] category1_id,
+    SPLIT(category_path, ',')[1] category2_id,
+    SPLIT(category_path, ',')[2] category3_id,
+    cost,
+    goods_name,
+    goods_unit,
+    goods_video,
+    intro,
+    is_auth,
+    market_enable,
+    mobile_intro,
+    original,
+    price,
+    sales_model,
+    self_operated,
+    store_id,
+    selling_point,
+    shop_category_path,
+    sn,
+    under_message,
+    weight,
+    store_category_path,
+    params,
+    goods_type
+FROM ods.ods_yjx_goods_full
+WHERE dt = '2024-07-06';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dwd.dwd_yjx_order_item_inc (
+    id              STRING COMMENT 'ID',
+    order_sn        STRING COMMENT '订单编号',
+    member_id       STRING COMMENT '用户编号',
+    sku_id          STRING COMMENT 'SKU ID',
+    create_time     STRING COMMENT '创建时间',
+    benefit_price   STRING COMMENT '优惠价格',
+    goods_price     STRING COMMENT '商品价格',
+    sku_num         STRING COMMENT '商品数量',
+    coupon_amount   DECIMAL(16, 2) COMMENT '优惠总金额，总共优惠了多少钱',
+    original_amount DECIMAL(16, 2) COMMENT '原价总金额，不使用优惠总共多少钱',
+    total_amount    DECIMAL(16, 2) COMMENT '总金额，原价总金额减去优惠总金额'
+)
+COMMENT '订单明细事实表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dwd/dwd_yjx_order_item_inc';
+
+-- 根据日期每天增量拉取
+WITH order_info AS (
+    SELECT
+        sn, -- 订单编号
+        member_id -- 用户编号
+    FROM ods.ods_yjx_order_inc
+    WHERE dt = '2024-07-06'
+),
+order_item AS (
+    SELECT
+        id, -- 编号
+        order_sn, -- 订单编号
+        create_time, -- 创建时间
+        flow_price, -- 实际金额
+        goods_price, -- 销售金额
+        sku_id, -- SKU ID
+        num -- 销售量
+    FROM ods.ods_yjx_order_item_inc
+    WHERE dt = '2024-07-06'
+),
+coupon_info AS (
+    SELECT
+        id, -- 购物券编号
+        benefit_amount AS benefit_amount -- 优惠金额
+    FROM ods.ods_yjx_coupon_info_full
+    WHERE dt = '2024-07-06'
+),
+coupon_use AS (
+    SELECT
+        coupon_id, -- 购物券编号
+        order_sn -- 订单编号
+    FROM ods.ods_yjx_coupon_use_inc
+    WHERE dt = '2024-07-06'
+)
+INSERT INTO TABLE dwd.dwd_yjx_order_item_inc PARTITION (dt = '2024-07-06')
+SELECT
+    order_item.id,
+    order_item.order_sn,
+    order_info.member_id,
+    order_item.sku_id,
+    order_item.create_time,
+    -- 实际金额 - 优惠金额 / 商品数量 = 优惠价格
+    order_item.flow_price - NVL(coupon_info.benefit_amount, 0) / order_item.num AS benefit_price,
+    order_item.goods_price,
+    order_item.num AS sku_num,
+    -- 优惠总金额
+    NVL(coupon_info.benefit_amount, 0) AS coupon_amount,
+    -- 实际金额 * 商品数量 = 原价总金额
+    order_item.flow_price * order_item.num AS original_amount,
+    -- 实际金额 * 商品数量 - 优惠金额 = 总金额
+    order_item.flow_price * order_item.num - NVL(coupon_info.benefit_amount, 0) AS total_price
+FROM order_item
+LEFT JOIN order_info ON order_item.order_sn = order_info.sn
+LEFT JOIN coupon_use ON order_item.order_sn = coupon_use.order_sn
+LEFT JOIN coupon_info ON coupon_use.coupon_id = coupon_info.id;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dwd.dwd_yjx_order_zip (
+    id                        BIGINT COMMENT 'ID',
+    create_time               STRING COMMENT '创建时间',
+    update_time               STRING COMMENT '更新时间',
+    can_return                STRING COMMENT '订单是否支持原路退回',
+    cancel_reason             STRING COMMENT '订单取消原因',
+    client_type               STRING COMMENT '订单来源',
+    complete_time             STRING COMMENT '完成时间',
+    consignee_address_id_path STRING COMMENT '地址ID逗号分割',
+    consignee_address_path    STRING COMMENT '地址名称逗号分割',
+    consignee_detail          STRING COMMENT '详细地址',
+    consignee_mobile          STRING COMMENT '收件人手机',
+    consignee_name            STRING COMMENT '收件人姓名',
+    deliver_status            STRING COMMENT '货运状态',
+    discount_price            STRING COMMENT '优惠金额',
+    flow_price                STRING COMMENT '总价格',
+    freight_price             STRING COMMENT '运费',
+    goods_num                 STRING COMMENT '商品数量',
+    goods_price               STRING COMMENT '商品价格',
+    logistics_code            STRING COMMENT '物流公司CODE',
+    logistics_name            STRING COMMENT '物流公司名称',
+    logistics_no              STRING COMMENT '发货单号',
+    logistics_time            STRING COMMENT '送货时间',
+    member_id                 STRING COMMENT '会员ID',
+    need_receipt              STRING COMMENT '是否需要发票',
+    order_status              STRING COMMENT '订单状态',
+    order_type                STRING COMMENT '订单类型',
+    parent_order_sn           STRING COMMENT '是否为其他订单下的订单，如果是则为依赖订单的sn，否则为空',
+    pay_order_no              STRING COMMENT '支付方式返回的交易号',
+    pay_status                STRING COMMENT '付款状态',
+    payment_method            STRING COMMENT '支付方式',
+    payment_time              STRING COMMENT '支付时间',
+    price_detail              STRING COMMENT '价格详情',
+    promotion_id              STRING COMMENT '是否为某订单类型的订单，如果是则为订单类型的id，否则为空',
+    remark                    STRING COMMENT '买家订单备注',
+    store_id                  STRING COMMENT '店铺ID',
+    sn                        STRING COMMENT '订单编号',
+    trade_sn                  STRING COMMENT '交易编号 关联Trade',
+    weight                    STRING COMMENT '订单商品总重量',
+    qr_code                   STRING COMMENT '提货码',
+    distribution_id           STRING COMMENT '分销商ID',
+    delivery_method           STRING COMMENT '配送方式',
+    zip_start_dt              STRING COMMENT '拉链区间开始日期',
+    zip_end_dt                STRING COMMENT '拉链区间结束日期'
+)
+COMMENT '订单事实拉链表'
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dwd/dwd_yjx_order_zip';
+
+-- false 表示关闭 SparkSQL 的 Parquet 文件解析器，使用 Hive 的 Parquet 文件解析器
+SET spark.sql.hive.convertMetastoreParquet=false;
+
+-- 需求：将增量数据插入拉链表，并修改拉链表历史数据的时间数据（使用覆盖写入实现）
+-- 将新增和变化后的数据存入临时表 T，把开始日期置为当前日期（dt），结束日期置为最大日期，即开链
+WITH t AS (
+    SELECT
+        id,
+        create_time,
+        update_time,
+        can_return,
+        cancel_reason,
+        client_type,
+        complete_time,
+        consignee_address_id_path,
+        consignee_address_path,
+        consignee_detail,
+        consignee_mobile,
+        consignee_name,
+        deliver_status,
+        discount_price,
+        flow_price,
+        freight_price,
+        goods_num,
+        goods_price,
+        logistics_code,
+        logistics_name,
+        logistics_no,
+        logistics_time,
+        member_id,
+        need_receipt,
+        order_status,
+        order_type,
+        parent_order_sn,
+        pay_order_no,
+        pay_status,
+        payment_method,
+        payment_time,
+        price_detail,
+        promotion_id,
+        remark,
+        store_id,
+        sn,
+        trade_sn,
+        weight,
+        qr_code,
+        distribution_id,
+        delivery_method,
+        dt AS zip_start_dt,
+        '9999-12-31' AS zip_end_dt
+    FROM ods.ods_yjx_order_inc
+    WHERE dt = '2024-07-06'
+),
+-- 将历史数据表中未变化和变化前的数据（历史数据表 LEFT JOIN T）存入临时表 H，
+-- 并且要把变化前的数据的结束日期修改为当前日期（dt），即闭链
+h AS (
+    SELECT
+        a.id,
+        a.create_time,
+        a.update_time,
+        a.can_return,
+        a.cancel_reason,
+        a.client_type,
+        a.complete_time,
+        a.consignee_address_id_path,
+        a.consignee_address_path,
+        a.consignee_detail,
+        a.consignee_mobile,
+        a.consignee_name,
+        a.deliver_status,
+        a.discount_price,
+        a.flow_price,
+        a.freight_price,
+        a.goods_num,
+        a.goods_price,
+        a.logistics_code,
+        a.logistics_name,
+        a.logistics_no,
+        a.logistics_time,
+        a.member_id,
+        a.need_receipt,
+        a.order_status,
+        a.order_type,
+        a.parent_order_sn,
+        a.pay_order_no,
+        a.pay_status,
+        a.payment_method,
+        a.payment_time,
+        a.price_detail,
+        a.promotion_id,
+        a.remark,
+        a.store_id,
+        a.sn,
+        a.trade_sn,
+        a.weight,
+        a.qr_code,
+        a.distribution_id,
+        a.delivery_method,
+        a.zip_start_dt,
+        IF(a.zip_end_dt='9999-12-31' AND t.id IS NOT NULL, t.zip_start_dt, a.zip_end_dt) AS zip_end_dt
+    FROM dwd.dwd_yjx_order_zip a
+    LEFT JOIN t ON a.id = t.id
+)
+-- 将未变化（历史）和变化前（闭链）的数据以及新增和变化后的数据（开链）覆盖插入历史数据表中（H UNION ALL T）
+INSERT OVERWRITE TABLE dwd.dwd_yjx_order_zip
+SELECT * FROM h
+UNION ALL
+SELECT * FROM t;
+
+然后是dws的代码：
+CREATE EXTERNAL TABLE IF NOT EXISTS dws.dws_attribution_compute (
+    attr_model STRING COMMENT '归因分析名称，比如：优惠券获取归因分析',
+    strategy   STRING COMMENT '归因模型名称，比如：线性归因',
+    guid       BIGINT COMMENT '全局用户唯一标识',
+    dest_event STRING COMMENT '目标事件',
+    attr_event STRING COMMENT '待归因事件',
+    weight     DOUBLE COMMENT '权重'
+)
+COMMENT '归因分析中间表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dws/dws_attribution_compute';
+
+-- 根据日期每天增量拉取计算
+WITH format_table AS (
+    -- 2. 将 fetchCoupon 标记为 1，其他数据标记为 0
+    SELECT
+        guid,
+        eventId,
+        IF(eventId = 'fetchCoupon', 1, 0) AS flag
+    FROM (
+        -- 1. 先将用户的事件序列，按照归因分析需求定义的条件进行过滤，留下满足条件的事件
+        SELECT guid, eventId, ts
+        FROM dwd.dwd_app_event_detail
+        WHERE dt = '2024-07-06'
+        AND eventId IN ('fetchCoupon', 'adShow', 'goodsView', 'addCart')
+        ORDER BY guid, ts
+    ) AS t
+),
+flag_table AS (
+    -- 3. 开窗聚合并将 flag 列从 UNBOUNDED PRECEDING 加到 CURRENT ROW
+    -- 4. 用第三步计算的结果减去 flag 得到的结果就是根据特定数据 fetchCoupon 分组的结果
+    SELECT
+        guid,
+        eventId,
+        flag,
+        SUM(flag) OVER(PARTITION BY guid ORDER BY guid
+                   ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) - flag AS re_flag
+    FROM format_table
+),
+result AS (
+    -- 4. 根据 re_flag 分组，并将结果收集进集合，收集时排除 fetchCoupon 事件
+    SELECT
+        guid,
+        CONCAT_WS(',', COLLECT_LIST(IF(eventId='fetchCoupon', null, eventId))) AS event_list
+    FROM flag_table
+    GROUP BY guid, re_flag
+)
+INSERT INTO TABLE dws.dws_attribution_compute PARTITION (dt = '2024-07-06')
+SELECT
+    '优惠券获取归因分析' AS attr_model,
+    '线性归因' AS strategy,
+    guid,
+    'fetchCoupon' AS dest_event,
+    event AS attr_event,
+    ROUND(100 / SIZE(SPLIT(event_list, ',')), 2) AS weight
+FROM result
+LATERAL VIEW EXPLODE(SPLIT(event_list, ',')) event_table AS event
+WHERE event_list <> '';
+
+select * from dws.dws_attribution_compute;
+CREATE EXTERNAL TABLE dws.dws_cart_user_add_1d (
+    member_id         STRING COMMENT '用户ID',
+    sku_id            STRING COMMENT '加购的sku_id',
+    sku_name          STRING COMMENT '商品名称',
+    cart_add_count_1d BIGINT COMMENT '最近1日加购次数',
+    cart_add_num_1d   BIGINT COMMENT '最近1日加购商品件数',
+    province          STRING COMMENT '省份',
+    city              STRING COMMENT '城市',
+    region            STRING COMMENT '地区',
+    osname            STRING COMMENT '系统名称'
+)
+COMMENT '最近1日用户加购汇总表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression' = 'SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dws/dws_cart_user_add_1d';
+
+
+WITH cart AS (
+    SELECT
+        member_id, -- 用户ID
+        sku_id, -- 商品ID
+        sku_name, -- 商品名称
+        sku_num -- 加购件数
+    FROM dwd.dwd_yjx_cart_inc
+    WHERE dt = '2024-07-06'
+),
+event AS (
+    SELECT
+        account,
+        eventId,
+        properties,
+        province,
+        city,
+        region,
+        osname
+    FROM dwd.dwd_app_event_detail
+    WHERE dt = '2024-07-06' AND eventId = 'addCart'
+)
+INSERT INTO TABLE dws.dws_cart_user_add_1d PARTITION (dt = '2024-07-06')
+SELECT
+    t1.member_id, -- 用户ID
+    t1.sku_id, -- 商品ID
+    MAX(t1.sku_name) AS sku_name, -- 商品名称
+    COUNT(*) AS cart_add_count_1d, -- 加购次数
+    SUM(t1.sku_num) AS cart_add_num_1d, -- 加购件数
+    t2.province,
+    t2.city,
+    t2.region,
+    t2.osname
+FROM cart AS t1
+LEFT JOIN event AS t2 ON t1.member_id = t2.account AND t1.sku_id = t2.properties['skuid']
+GROUP BY t1.member_id, t1.sku_id, t2.province, t2.city, t2.region, t2.osname;
+
+select * from dws.dws_cart_user_add_1d;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dws.dws_coupon_order_30d (
+    coupon_id                STRING COMMENT '优惠券ID',
+    coupon_name              STRING COMMENT '优惠券名称',
+    coupon_type_code         STRING COMMENT '优惠券类型ID',
+    coupon_type_name         STRING COMMENT '优惠券类型名称',
+    coupon_rule              STRING COMMENT '优惠券规则',
+    original_amount_30d      DECIMAL(16, 2) COMMENT '使用下单原始总金额',
+    coupon_reduce_amount_30d DECIMAL(16, 2) COMMENT '使用下单优惠总金额'
+)
+COMMENT '最近30日优惠券粒度订单汇总表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dws/dws_coupon_order_30d';
+
+-- 根据日期每天增量拉取计算
+-- 优惠券维度信息
+WITH coupon AS (
+    SELECT
+        id, -- 购物券编号
+        coupon_name, -- 购物券名称
+        coupon_type_code, -- 购物券类型编码
+        coupon_type_name, -- 购物券类型名称（3201满减券、3202满件打折券、3203现金券、3204折扣券）
+        benefit_rule AS coupon_rule -- 优惠规则，例如满x元减x元，满x件打x折，减x元，打x折
+    FROM dim.dim_coupon_full -- 优惠券维度表
+    WHERE dt = '2024-07-06'
+),
+-- 最近30日使用优惠券下单信息
+coupon_order_30d AS (
+    SELECT
+        coupon_id, -- 优惠券ID
+        order_sn -- 订单编号
+    FROM dwd.dwd_coupon_order_inc -- 优惠券下单使用事务事实表
+    WHERE dt >= DATE_SUB('2024-07-06', 29) AND dt <= '2024-07-06' -- 最近30日
+),
+-- 订单拉链表最近30日优惠金额大于0（说明使用了优惠券）的数据
+order_zip AS (
+    SELECT
+        discount_price, -- 优惠金额
+        flow_price, -- 总价格
+        sn -- 订单编号
+    FROM dwd.dwd_yjx_order_zip -- 订单事实拉链表
+    WHERE zip_start_dt >= DATE_SUB('2024-07-06', 29) AND zip_start_dt <= '2024-07-06'
+    AND discount_price > 0 -- 优惠金额 > 0
+),
+result AS (
+    SELECT
+        oz.sn, -- 订单编号
+        SUM(flow_price) AS original_amount_30d, -- 使用下单原始总金额
+        SUM(discount_price) AS coupon_reduce_amount_30d -- 使用下单优惠总金额
+    FROM order_zip AS oz
+    LEFT JOIN coupon_order_30d AS co ON oz.sn = co.order_sn
+    LEFT JOIN coupon AS c ON co.coupon_id = c.id
+    GROUP BY oz.sn
+)
+INSERT INTO TABLE dws.dws_coupon_order_30d PARTITION (dt = '2024-07-06')
+SELECT
+    c.id, -- 购物券编号
+    c.coupon_name, -- 购物券名称
+    c.coupon_type_code, -- 购物券类型编码
+    c.coupon_type_name, -- 购物券类型名称（3201满减券、3202满件打折券、3203现金券、3204折扣券）
+    c.coupon_rule, -- 优惠规则，例如满x元减x元，满x件打x折，减x元，打x折
+    oz.original_amount_30d, -- 使用下单原始总金额
+    oz.coupon_reduce_amount_30d -- 使用下单优惠总金额
+FROM result AS oz
+LEFT JOIN coupon_order_30d AS co ON oz.sn = co.order_sn
+LEFT JOIN coupon AS c ON co.coupon_id = c.id;
+
+select * from dws.dws_coupon_order_30d;
+CREATE EXTERNAL TABLE IF NOT EXISTS dws.dws_funnel_compute_step (
+    guid         BIGINT COMMENT '全局用户唯一标识',
+    funnel_model STRING COMMENT '漏斗模型名称',
+    eventId      STRING COMMENT '当前用户某漏斗模型的最大步骤对应的事件名称',
+    max_step     INT COMMENT '当前用户某漏斗模型的最大步骤'
+)
+COMMENT '漏斗模型中间表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dws/dws_funnel_compute_step';
+
+-- 根据日期每天增量拉取计算
+-- 聚合下单漏斗模型数据
+WITH tmp AS (
+    SELECT
+        guid,
+        -- 将 ts 和 eventId 使用 _ 进行拼接，并放入 List 集合，然后对集合排序，并使用逗号对集合数据进行拼接
+        CONCAT_WS(',', SORT_ARRAY(COLLECT_LIST(CONCAT_WS('_', ts, eventId)))) AS event_seq
+    FROM dwd.dwd_app_event_detail
+    -- 根据下单漏斗模型过滤出指定事件类型的数据 goodsView, addCart, submitOrder
+    WHERE dt = '2024-07-06' AND eventId IN ('goodsView', 'addCart', 'submitOrder')
+    GROUP BY guid
+)
+INSERT INTO TABLE dws.dws_funnel_compute_step PARTITION (dt = '2024-07-06')
+SELECT guid, funnel_model, eventId, max_step
+FROM (
+    SELECT
+        guid,
+        '下单漏斗模型' AS funnel_model,
+        CASE
+            -- 注意 CASE WHEN 的顺序
+            WHEN REGEXP_EXTRACT(event_seq, '.*?(goodsView).*?(addCart).*?(submitOrder).*?', 3) = 'submitOrder' THEN 'submitOrder'
+            WHEN REGEXP_EXTRACT(event_seq, '.*?(goodsView).*?(addCart).*?', 2) = 'addCart' THEN 'addCart'
+            WHEN REGEXP_EXTRACT(event_seq, '.*?(goodsView).*?', 1) = 'goodsView' THEN 'goodsView'
+            ELSE ''
+            END AS eventId,
+        CASE
+            WHEN REGEXP_EXTRACT(event_seq, '.*?(goodsView).*?(addCart).*?(submitOrder).*?', 3) = 'submitOrder' then 3
+            WHEN REGEXP_EXTRACT(event_seq, '.*?(goodsView).*?(addCart).*?', 2) = 'addCart' THEN 2
+            WHEN REGEXP_EXTRACT(event_seq, '.*?(goodsView).*?', 1) = 'goodsView' THEN 1
+            ELSE 0
+            END AS max_step
+    FROM tmp
+) AS t
+WHERE max_step > 0;
+
+select * from dws.dws_funnel_compute_step;
+
+-- 聚合搜购漏斗模型数据
+WITH tmp AS (
+    SELECT
+        guid,
+        -- 将 ts 和 eventId 使用 _ 进行拼接，并放入 List 集合，然后对集合排序，并使用逗号对集合数据进行拼接
+        CONCAT_WS(',', SORT_ARRAY(COLLECT_LIST(CONCAT_WS('_', ts, eventId)))) AS event_seq
+    FROM dwd.dwd_app_event_detail
+    -- 根据搜购漏斗模型过滤出指定事件类型的数据 search, goodsView, addCart
+    WHERE dt = '2024-07-06' AND eventId IN ('search', 'goodsView', 'addCart')
+    GROUP BY guid
+)
+INSERT INTO TABLE dws.dws_funnel_compute_step PARTITION (dt = '2024-07-06')
+SELECT guid, funnel_model, eventId, max_step
+FROM (
+    SELECT
+        guid,
+        '搜购漏斗模型' AS funnel_model,
+        CASE
+            -- 注意 CASE WHEN 的顺序
+            WHEN REGEXP_EXTRACT(event_seq, '.*?(search).*?(goodsView).*?(addCart).*?', 3) = 'addCart' THEN 'addCart'
+            WHEN REGEXP_EXTRACT(event_seq, '.*?(search).*?(goodsView).*?', 2) = 'goodsView' THEN 'goodsView'
+            WHEN REGEXP_EXTRACT(event_seq, '.*?(search).*?', 1) = 'search' THEN 'search'
+            ELSE ''
+            END AS eventId,
+        CASE
+            WHEN REGEXP_EXTRACT(event_seq, '.*?(search).*?(goodsView).*?(addCart).*?', 3) = 'addCart' then 3
+            WHEN REGEXP_EXTRACT(event_seq, '.*?(search).*?(goodsView).*?', 2) = 'goodsView' THEN 2
+            WHEN REGEXP_EXTRACT(event_seq, '.*?(search).*?', 1) = 'search' THEN 1
+            ELSE 0
+            END AS max_step
+    FROM tmp
+) AS t
+WHERE max_step > 0;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dws.dws_goods_topic (
+    goods_id             BIGINT COMMENT '商品ID',
+    create_time          STRING COMMENT '创建时间',
+    delete_flag          STRING COMMENT '删除标志 true/false 删除/未删除',
+    auth_message         STRING COMMENT '审核信息',
+    brand_id             STRING COMMENT '品牌ID',
+    category1_id         STRING COMMENT '一级分类',
+    category2_id         STRING COMMENT '二级分类',
+    category3_id         STRING COMMENT '三级分类',
+    cost                 STRING COMMENT '售价',
+    goods_name           STRING COMMENT '商品名称',
+    goods_unit           STRING COMMENT '计量单位',
+    goods_video          STRING COMMENT '商品视频',
+    intro                STRING COMMENT '商品详情',
+    is_auth              STRING COMMENT '审核状态',
+    market_enable        STRING COMMENT '上架状态',
+    mobile_intro         STRING COMMENT '商品移动端详情',
+    original             STRING COMMENT '原图路径',
+    price                STRING COMMENT '成本价格',
+    sales_model          STRING COMMENT '销售模式',
+    self_operated        STRING COMMENT '是否自营',
+    store_id             STRING COMMENT '店铺ID',
+    selling_point        STRING COMMENT '卖点',
+    shop_category_path   STRING COMMENT '店铺分类',
+    sn                   STRING COMMENT '商品编号',
+    under_message        STRING COMMENT '下架原因',
+    weight               STRING COMMENT '重量',
+    store_category_path  STRING COMMENT '店铺分类路径',
+    params               STRING COMMENT '参数',
+    goods_type           STRING COMMENT '商品类别',
+    goods_total          BIGINT COMMENT '商品销售总量',
+    goods_sale           DOUBLE COMMENT '商品销售总额',
+    goods_collection_num BIGINT COMMENT '商品收藏数量'
+)
+COMMENT '商品主题表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dws/dws_goods_topic';
+
+-- 根据日期每天增量拉取计算
+-- 商品明细
+WITH goods AS (
+    SELECT
+        id AS goods_id
+        ,create_time
+        ,delete_flag
+        ,auth_message
+        ,brand_id
+        ,category1_id
+        ,category2_id
+        ,category3_id
+        ,cost
+        ,goods_name
+        ,goods_unit
+        ,goods_video
+        ,intro
+        ,is_auth
+        ,market_enable
+        ,mobile_intro
+        ,original
+        ,price
+        ,sales_model
+        ,self_operated
+        ,store_id
+        ,selling_point
+        ,shop_category_path
+        ,sn
+        ,under_message
+        ,weight
+        ,store_category_path
+        ,params
+        ,goods_type
+    FROM dwd.dwd_yjx_goods_full -- 商品明细事务事实表
+    WHERE dt = '2024-07-06'
+),
+-- 各商品的订单总金额与商品总数量
+goods_order AS (
+    SELECT
+        goods_id,
+        SUM(goods_total) AS goods_total,
+        SUM(goods_sale) AS goods_sale
+    FROM (
+        SELECT
+            goods_id,
+            SUM(t1.sku_num) AS goods_total, -- 商品数量
+            SUM(t1.total_amount) AS goods_sale -- 总金额
+        FROM dwd.dwd_yjx_order_item_inc t1 -- 订单明细事实表
+        LEFT JOIN dim.dim_sku_full t2 -- 商品SKU维度表
+        WHERE t1.dt = '2024-07-06' AND t1.sku_id = t2.id
+        GROUP BY goods_id, sku_id
+    ) AS a
+    GROUP BY goods_id
+),
+-- 各商品的收藏总数量
+goods_collection AS (
+    SELECT
+        goods_id,
+        SUM(goods_collection_num) AS goods_collection_num
+    FROM (
+        SELECT
+            goods_id,
+            COUNT(*) AS goods_collection_num
+        FROM dwd.dwd_yjx_goods_collection_inc t1 -- 商品收藏事务事实表
+        LEFT JOIN dim.dim_sku_full t2 -- 商品SKU维度表
+        WHERE t1.dt = '2024-07-06' AND t1.sku_id = t2.id
+        GROUP BY goods_id, sku_id
+    ) AS a
+    GROUP BY goods_id
+)
+INSERT INTO TABLE dws.dws_goods_topic PARTITION (dt = '2024-07-06')
+SELECT
+    g.goods_id
+    ,g.create_time
+    ,g.delete_flag
+    ,g.auth_message
+    ,g.brand_id
+    ,g.category1_id
+    ,g.category2_id
+    ,g.category3_id
+    ,g.cost
+    ,g.goods_name
+    ,g.goods_unit
+    ,g.goods_video
+    ,g.intro
+    ,g.is_auth
+    ,g.market_enable
+    ,g.mobile_intro
+    ,g.original
+    ,g.price
+    ,g.sales_model
+    ,g.self_operated
+    ,g.store_id
+    ,g.selling_point
+    ,g.shop_category_path
+    ,g.sn
+    ,g.under_message
+    ,g.weight
+    ,g.store_category_path
+    ,g.params
+    ,g.goods_type
+    ,go.goods_total
+    ,go.goods_sale
+    ,gc.goods_collection_num
+FROM goods AS g
+LEFT JOIN goods_order AS go ON g.goods_id = go.goods_id
+LEFT JOIN goods_collection AS gc ON g.goods_id = gc.goods_id;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dws.dws_order_user_sku_order_1d (
+    member_id                STRING COMMENT '用户ID',
+    sku_id                   STRING COMMENT 'sku_id',
+    sku_name                 STRING COMMENT 'sku名称',
+    brand_id                 STRING COMMENT '品牌ID',
+    brand_name               STRING COMMENT '品牌名称',
+    category1_id             STRING COMMENT '一级分类ID',
+    category1_name           STRING COMMENT '一级分类名称',
+    category2_id             STRING COMMENT '二级分类ID',
+    category2_name           STRING COMMENT '二级分类名称',
+    category3_id             STRING COMMENT '三级分类ID',
+    category3_name           STRING COMMENT '三级分类名称',
+    order_cnt_1d             BIGINT COMMENT '最近1日下单总次数',
+    order_num_1d             BIGINT COMMENT '最近1日下单总件数',
+    coupon_reduce_amount_1d  DECIMAL(16, 2) COMMENT '最近1日优惠券优惠总金额',
+    order_original_amount_1d DECIMAL(16, 2) COMMENT '最近1日下单原始总金额',
+    order_total_amount_1d    DECIMAL(16, 2) COMMENT '最近1日下单最终总金额'
+)
+COMMENT '最近1日用户商品粒度订单汇总表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dws/dws_order_user_sku_order_1d';
+
+-- 根据日期每天增量拉取计算
+WITH order_item AS (
+    SELECT
+        member_id,
+        sku_id,
+        COUNT(DISTINCT order_sn) AS order_cnt_1d, -- 下单总次数
+        SUM(sku_num) AS order_num_1d, -- 下单总件数
+        SUM(coupon_amount) AS coupon_reduce_amount_1d, -- 优惠总金额，总共优惠了多少钱
+        SUM(original_amount) AS order_original_amount_1d, -- 原价总金额，不使用优惠总共多少钱
+        SUM(total_amount) AS order_total_amount_1d -- 总金额，原价总金额减去优惠总金额
+    FROM dwd.dwd_yjx_order_item_inc
+    WHERE dt = '2024-07-06'
+    GROUP BY member_id, sku_id
+),
+sku AS (
+    SELECT
+        id,
+        sku_name,
+        brand_id,
+        brand_name,
+        category1_id,
+        category1_name,
+        category2_id,
+        category2_name,
+        category3_id,
+        category3_name
+    FROM dim.dim_sku_full
+    WHERE dt = '2024-07-06'
+)
+INSERT INTO TABLE dws.dws_order_user_sku_order_1d PARTITION (dt = '2024-07-06')
+SELECT
+    member_id,
+    sku_id,
+    sku_name,
+    brand_id,
+    brand_name,
+    category1_id,
+    category1_name,
+    category2_id,
+    category2_name,
+    category3_id,
+    category3_name,
+    order_cnt_1d,
+    order_num_1d,
+    coupon_reduce_amount_1d,
+    order_original_amount_1d,
+    order_total_amount_1d
+FROM order_item
+LEFT JOIN sku ON order_item.sku_id = sku.id;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dws.dws_path_acc_detail (
+    guid           BIGINT COMMENT '全局用户唯一标识',
+    splitSessionId STRING COMMENT '分割SessionID',
+    step           INT COMMENT '访问步骤',
+    page           STRING COMMENT '访问页',
+    ref_page       STRING COMMENT '前一页',
+    page_acc_tml   BIGINT COMMENT '页面停留时长'
+)
+COMMENT '用户访问路径明细表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dws/dws_path_acc_detail';
+
+WITH tmp AS (
+    SELECT
+        guid,
+        splitSessionId,
+        ROW_NUMBER() OVER (PARTITION BY guid, splitSessionId ORDER BY ts) AS step,
+        properties['url'] AS page,
+        -- LAG(COL, N, DEFAULT_VAL)：往前第 N 行数据，没有数据的话用 DEFAULT_VAL 代替
+        LAG(properties['url'], 1, null) OVER (PARTITION BY guid, splitSessionId ORDER BY ts) AS ref_page,
+        -- LEAD(COL, N, DEFAULT_VAL)：往后第 N 行数据，没有数据的话用 DEFAULT_VAL 代替
+        LEAD(ts, 1, null) OVER (PARTITION BY splitSessionId ORDER BY ts) - ts AS page_acc_tml
+    FROM dwd.dwd_app_event_detail
+    WHERE dt = '2024-07-06'
+)
+INSERT INTO TABLE dws.dws_path_acc_detail PARTITION (dt = '2024-07-06')
+SELECT
+    guid,
+    splitsessionid,
+    step,
+    page,
+    ref_page,
+    -- 如果是最后一个页面，访问时长为 null，则赋予默认值 10s
+    IF(page_acc_tml IS NULL, 10000, page_acc_tml) AS page_acc_tml
+FROM tmp;
+
+select * from dws.dws_path_acc_detail;
+CREATE EXTERNAL TABLE IF NOT EXISTS dws.dws_profile_interact_tag (
+    guid        BIGINT COMMENT '全局用户唯一标识',
+    signIn_cnt  STRING COMMENT '签到次数',
+    thumbUp_cnt STRING COMMENT '点赞次数',
+    collect_cnt STRING COMMENT '收藏次数',
+    share_cnt   BIGINT COMMENT '分享次数'
+)
+COMMENT '用户交互画像标签表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression' = 'SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dws/dws_profile_interact_tag';
+
+-- 根据日期每天增量拉取计算
+WITH event AS (
+    -- 从事件明细表中，按照 用户和事件 分组，COUNT 出事件的次数
+    SELECT
+        guid,
+        eventId,
+        COUNT(*) AS event_cnt
+    FROM dwd.dwd_app_event_detail
+    WHERE dt = '2024-07-06'
+    GROUP BY guid, eventId
+),
+-- 利用 COLLECT_LIST 和 STR_TO_MAP 将结果列转行
+result AS (
+    SELECT
+        guid,
+        STR_TO_MAP(
+            -- List(eventId:event_cnt, eventId:event_cnt, ...)
+            -- eventId:event_cnt,eventId:event_cnt,...
+            CONCAT_WS(',', COLLECT_LIST(CONCAT_WS(':', eventId, event_cnt))),
+            -- 先根据逗号分隔，再根据冒号构建一组 Map
+            ',',
+            ':'
+        ) AS event_map
+    FROM event
+    GROUP BY guid
+)
+INSERT INTO TABLE dws.dws_profile_interact_tag PARTITION (dt = '2024-07-06')
+-- 按照目标表的字段依次取值即可
+SELECT
+    guid,
+    CAST(event_map['signIn'] AS INT) AS signIn_cnt,
+    CAST(event_map['thumbUp'] AS INT) AS thumbUp_cnt,
+    CAST(event_map['collect'] AS INT) AS collect_cnt,
+    CAST(event_map['share'] AS INT) AS share_cnt
+FROM result;
+
+select * from dws.dws_profile_interact_tag;
+
+-- 最近30日可以通过上面的日聚合表快速累加得出，这里ads就不演示了
+SELECT
+    guid,
+    SUM(signIn_cnt) AS signIn_30d,
+    SUM(thumbUp_cnt) AS thumbUp_30d,
+    SUM(collect_cnt) AS collect_30d,
+    SUM(share_cnt) AS share_30d
+FROM dws.dws_profile_interact_tag
+-- 最近 30 日
+WHERE dt >= DATE_SUB('2024-07-06', 29) AND dt <= '2024-07-06'
+GROUP BY guid;
+
+-- 将上述查询转存为标签存储的最终表结构的数据，这里ads就不演示了
+SELECT
+    guid,
+    tag_name,
+    tag_value
+FROM dws.dws_profile_interact_tag
+LATERAL VIEW EXPLODE(MAP(
+        '签到次数', signIn_cnt,
+        '点赞次数', thumbUp_cnt,
+        '收藏次数', collect_cnt,
+        '分享次数', share_cnt
+    )) exploded_table AS tag_name, tag_value
+WHERE dt = '2024-07-06';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dws.dws_traffic_detail (
+    account          STRING COMMENT '会员ID',
+    appId            STRING COMMENT 'AppID',
+    appVersion       STRING COMMENT 'App版本',
+    carrier          STRING COMMENT '运营商',
+    deviceId         STRING COMMENT '设备ID',
+    deviceType       STRING COMMENT '设备类型',
+    eventId          STRING COMMENT '事件ID',
+    ip               STRING COMMENT 'IP地址',
+    latitude         DOUBLE COMMENT '纬度',
+    longitude        DOUBLE COMMENT '经度',
+    netType          STRING COMMENT '网络类型',
+    osName           STRING COMMENT '手机操作系统',
+    osVersion        STRING COMMENT '手机操作系统版本',
+    properties       MAP<STRING,STRING> COMMENT '事件数据',
+    resolution       STRING COMMENT '分辨率',
+    ts               BIGINT COMMENT '事件时间',
+    splitSessionId   STRING COMMENT '分割SessionID',
+    province         STRING COMMENT '省',
+    city             STRING COMMENT '市',
+    region           STRING COMMENT '县（区）',
+    filledAccount    STRING COMMENT '回填账户',
+    guid             BIGINT COMMENT '全局用户唯一标识',
+    isNew            INT COMMENT '是否新用户，1 为新用户，0 为老用户',
+    enter_page_id    STRING COMMENT '入口页面 ID',
+    exit_page_id     STRING COMMENT '出口页面 ID',
+    start_time       BIGINT COMMENT '起始时间',
+    end_time         BIGINT COMMENT '结束时间',
+    is_jumpout       STRING COMMENT '是否跳出会话',
+    ss_pv_cnt        BIGINT COMMENT '每个分割会话的访问页面数',
+    page_acc_tml     BIGINT COMMENT '页面停留时长，acc 表示 access'
+)
+COMMENT '流量明细大宽表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dws/dws_traffic_detail';
+
+-- 根据日期每天增量拉取计算
+WITH event AS (
+    SELECT
+        account,
+        appId,
+        appVersion,
+        carrier,
+        deviceId,
+        deviceType,
+        eventId,
+        ip,
+        latitude,
+        longitude,
+        netType,
+        osName,
+        osVersion,
+        properties,
+        resolution,
+        ts,
+        splitSessionId,
+        province,
+        city,
+        region,
+        filledAccount,
+        guid,
+        isNew
+    FROM dwd.dwd_app_event_detail
+    WHERE eventId = 'pageView' AND dt = '2024-07-06'
+),
+session_agg AS (
+    SELECT
+        guid,
+        splitSessionId,
+        enter_page_id,
+        exit_page_id,
+        start_time,
+        end_time,
+        is_jumpout,
+        ss_pv_cnt
+    FROM dws.dws_traffic_session_agg
+    WHERE dt = '2024-07-06'
+),
+result AS (
+    SELECT
+        event.account,
+        event.appId,
+        event.appVersion,
+        event.carrier,
+        event.deviceId,
+        event.deviceType,
+        event.eventId,
+        event.ip,
+        event.latitude,
+        event.longitude,
+        event.netType,
+        event.osName,
+        event.osVersion,
+        event.properties,
+        event.resolution,
+        event.ts,
+        event.splitSessionId,
+        event.province,
+        event.city,
+        event.region,
+        event.filledAccount,
+        event.guid,
+        event.isnew,
+        session_agg.enter_page_id,
+        session_agg.exit_page_id,
+        session_agg.start_time,
+        session_agg.end_time,
+        session_agg.is_jumpout,
+        session_agg.ss_pv_cnt,
+        -- 根据会话分组，时间戳排序；再联表 dws_app_session_agg 查询出每个页面
+        -- 用访问下一个页面时的起始时间 - 访问上一个页面时的起始时间 = 该页面停留时长
+        -- LEAD(COL, N, DEFAULT_VAL)：往后第 N 行数据，没有数据的话用 DEFAULT_VAL 代替
+        LEAD(event.ts, 1, NULL)
+            OVER (PARTITION BY event.splitSessionId ORDER BY event.ts) - event.ts AS page_acc_tml
+    FROM event
+    INNER JOIN session_agg ON event.splitSessionId = session_agg.splitSessionId
+)
+INSERT OVERWRITE TABLE dws.dws_traffic_detail PARTITION (dt = '2024-07-06')
+SELECT
+    account,
+    appId,
+    appVersion,
+    carrier,
+    deviceId,
+    deviceType,
+    eventId,
+    ip,
+    latitude,
+    longitude,
+    netType,
+    osName,
+    osVersion,
+    properties,
+    resolution,
+    ts,
+    splitSessionId,
+    province,
+    city,
+    region,
+    filledAccount,
+    guid,
+    isnew,
+    enter_page_id,
+    exit_page_id,
+    start_time,
+    end_time,
+    is_jumpout,
+    ss_pv_cnt,
+    -- 如果是最后一个页面，访问时长为 null，则赋予默认值 10s
+    IF(page_acc_tml IS NULL, 10000, page_acc_tml) AS page_acc_tml
+FROM result;
+
+CREATE DATABASE IF NOT EXISTS dws;
+CREATE EXTERNAL TABLE IF NOT EXISTS dws.dws_traffic_session_agg (
+    guid           BIGINT COMMENT '全局用户唯一标识',
+    splitSessionId STRING COMMENT '分割后的会话 ID',
+    enter_page_id  STRING COMMENT '入口页面 ID',
+    exit_page_id   STRING COMMENT '出口页面 ID',
+    start_time     BIGINT COMMENT '起始时间',
+    end_time       BIGINT COMMENT '结束时间',
+    is_jumpout     STRING COMMENT '是否跳出会话',
+    ss_pv_cnt      BIGINT COMMENT '每个分割会话的访问页面数'
+)
+COMMENT '会话信息聚合表/会话信息维度表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dws/dws_traffic_session_agg';
+
+-- 根据日期每天增量拉取计算
+INSERT OVERWRITE TABLE dws.dws_traffic_session_agg PARTITION (dt = '2024-07-06')
+SELECT
+    guid,
+    splitSessionId,
+    -- e.g. 1701366976405_pageView_3 1701372128884_pageView_2 1701386598700_pageView_6
+    -- e.g. SPLIT(1701366976405_pageView_3, '_')[2] = 3
+    SPLIT(MIN(CONCAT_WS('_', ts, eventId, properties['pageid'])), '_')[2] AS enter_page_id,
+    -- e.g. 1701398307354_pageView_3 1701398307354_pageView_2 1701398307354_pageView_6
+    -- e.g. SPLIT(1701372128884_pageView_6, '_')[2] = 6
+    SPLIT(MAX(CONCAT_WS('_', ts, eventId, properties['pageid'])), '_')[2] AS exit_page_id,
+    MIN(ts) AS start_time,
+    MAX(ts) AS end_time,
+    -- 其他事件的操作（fetchCoupon/addCart/submitOrder等）都是在某个页面上进行触发的
+    -- 所以 eventId = 'pageView' 且统计数小于 2（小于等于 1）就是跳出会话
+    IF(COUNT(*) < 2, 'Y', 'N') AS is_jumpout,
+    COUNT(*) AS ss_pv_cnt
+FROM dwd.dwd_app_event_detail
+WHERE dt = '2024-07-06' AND eventId = 'pageView'
+GROUP BY guid, splitSessionId;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dws.dws_user_active_range_zip
+(
+    guid         BIGINT COMMENT '全局用户唯一标识',
+    first_acc_dt STRING COMMENT '用户第一次访问的时间，使用设备匿名的第一次访问或者登录账号的第一次访问',
+    zip_start_dt STRING COMMENT '连续活跃起始日',
+    zip_end_dt   STRING COMMENT '连续活跃结束日'
+)
+    COMMENT '用户连续活跃区间拉链表'
+    PARTITIONED BY (dt STRING)
+    STORED AS PARQUET
+    TBLPROPERTIES ('parquet.compression' = 'SNAPPY')
+    LOCATION 'hdfs://hdfs-yjx/yjx/app/dws/dws_user_active_range_zip';
+
+SET spark.sql.hive.convertMetastoreParquet=false;
+
+-- 将新增活跃和连续活跃的数据存入临时表 T，把开始日期置为当前日期（dt），结束日期置为最大日期，即开链
+WITH t AS (
+    SELECT a.guid,
+           b.first_acc_dt,
+           a.zip_start_dt,
+           a.zip_end_dt
+    FROM (
+             SELECT guid, '2024-07-07' AS zip_start_dt, '9999-12-31' AS zip_end_dt
+             FROM dwd.dwd_app_event_detail
+             WHERE dt = '2024-07-07'
+             GROUP BY guid
+         ) a
+             INNER JOIN dwd.dwd_user_register b ON a.guid = b.guid
+),
+     -- 将历史数据表中连续活跃和活跃中断的数据（历史数据表 LEFT JOIN T）存入临时表 H，
+     -- 并且要把之前连续活跃但是今天已中断的数据的结束日期修改为当前日期（dt），即闭链
+     h AS (
+         SELECT a.guid,
+                a.first_acc_dt,
+                a.zip_start_dt,
+                IF(a.zip_end_dt = '9999-12-31' AND t.guid IS NULL, '2024-07-07', a.zip_end_dt) AS zip_end_dt
+         FROM dws.dws_user_active_range_zip a
+                  LEFT JOIN t ON a.guid = t.guid
+     ),
+     -- 过滤每日活跃中连续活跃的用户，留下新增活跃数据
+     t2 AS (
+         SELECT *
+         FROM t
+         WHERE guid NOT IN (SELECT DISTINCT guid FROM h WHERE zip_end_dt = '9999-12-31')
+     )
+-- 将连续活跃（历史）和活跃中断（闭链）的数据以及新增活跃的数据（开链）覆盖插入历史数据表中（H UNION ALL T2）
+INSERT OVERWRITE TABLE dws.dws_user_active_range_zip PARTITION (dt = '2024-07-07')
+SELECT *
+FROM h
+UNION ALL
+SELECT *
+FROM t2;
+
+select guid
+from dws.dws_user_active_range_zip
+group by guid having count(guid)=1;
+
+select *
+from dws.dws_user_active_range_zip
+where guid < 489 and zip_end_dt = '9999-12-31'and dt = '2024-07-07' ;-- 329
+
+
+
+
+ALTER TABLE dws.dws_user_active_range_zip
+    DROP PARTITION ( dt = '2024-07-07');
+
+select *
+from dws.dws_user_active_range_zip
+where zip_end_dt = '9999-12-31';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dws.dws_user_dau_bitmap_30d (
+    calc_dt      STRING COMMENT '统计日期',
+    guid         BIGINT COMMENT '全局用户唯一标识',
+    isNew        INT COMMENT '新老用户标识',
+    first_acc_dt STRING COMMENT '用户第一次访问的时间，使用设备匿名的第一次访问或者登录账号的第一次访问',
+    bitmap       BIGINT COMMENT '最近30天日活数据'
+)
+COMMENT '最近30日用户日活BitMap表'
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dws/dws_user_dau_bitmap_30d';
+
+
+CREATE EXTERNAL TABLE IF NOT EXISTS dws.dws_user_retention_cnt (
+	calc_dt      STRING COMMENT '统计日期',
+	first_acc_dt STRING COMMENT '用户第一次访问的时间，使用设备匿名的第一次访问或者登录账号的第一次访问',
+	ret_days     INT COMMENT '留存天数',
+	ret_user_cnt INT COMMENT '留存人数'
+)
+COMMENT '新用户留存表'
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/dws/dws_user_retention_cnt';
+
+-- 统计日期 2024-07-06
+INSERT INTO TABLE dws.dws_user_retention_cnt
+SELECT
+	'2024-07-06' AS calc_dt, -- 统计日期
+	first_acc_dt, -- 首访日期
+	-- 统计日期 - 首访日期 = 留存天数
+	DATEDIFF('2024-07-06', first_acc_dt) AS ret_days,
+	-- 连续活跃人数就是留存人数
+	COUNT(IF(zip_end_dt = '9999-12-31', 1, null)) AS ret_user_cnt
+FROM dws.dws_user_active_range_zip
+WHERE dt = '2024-07-06'
+-- 最近30日或者60日：首访日期大于等于统计日期的 30/60 天前，小于等于统计日期
+-- AND first_acc_dt >= DATE_SUB('2024-07-06', 30) AND first_acc_dt <= '2024-07-06'
+-- 或者使用 AND DATEDIFF('2024-07-06', first_acc_dt) <= 30
+GROUP BY first_acc_dt;
+
+-- drop table dws.dws_user_retention_cnt;
+-- 统计日期 2024-07-07
+INSERT INTO TABLE dws.dws_user_retention_cnt
+SELECT
+	'2024-07-07' AS calc_dt, -- 统计日期
+	first_acc_dt, -- 首访日期
+	-- 统计日期 - 首访日期 = 留存天数
+	DATEDIFF('2024-07-07', first_acc_dt) AS ret_days,
+	-- 连续活跃人数就是留存人数
+	COUNT(IF(zip_end_dt = '9999-12-31', 1, null)) AS ret_user_cnt
+FROM dws.dws_user_active_range_zip
+WHERE dt = '2024-07-07'
+-- 最近30日或者60日：首访日期大于等于统计日期的 30/60 天前，小于等于统计日期
+-- AND first_acc_dt >= DATE_SUB('2024-07-07', 30) AND first_acc_dt <= '2024-07-07'
+-- 或者使用 AND DATEDIFF('2024-07-07', first_acc_dt) <= 30
+GROUP BY first_acc_dt;
+
+select * from dws.dws_user_retention_cnt;
+然后是最后的ads层代码：
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_attribution_coupon_fetch (
+    calc_dt      STRING COMMENT '统计日期',
+    attr_model   STRING COMMENT '归因分析名称，比如：优惠券获取归因分析',
+    strategy     STRING COMMENT '归因模型名称，比如：线性归因',
+    dest_event   STRING COMMENT '目标事件',
+    attr_event   STRING COMMENT '待归因事件',
+    event_cnt    BIGINT COMMENT '待归因事件触发次数',
+    user_cnt     BIGINT COMMENT '待归因事件触发人数',
+    weight       DOUBLE COMMENT '权重',
+    weight_total DOUBLE COMMENT '总权重'
+)
+COMMENT '优惠券获取归因分析统计表'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_attribution_coupon_fetch';
+
+
+drop table ads.ads_attribution_coupon_fetch;
+
+INSERT INTO TABLE ads.ads_attribution_coupon_fetch
+SELECT
+    '2024-07-06' AS calc_dt,
+    attr_model,
+    strategy,
+    dest_event,
+    attr_event,
+    event_cnt,
+    user_cnt,
+    weight,
+    SUM(weight) OVER() AS weight_total
+FROM (
+    SELECT
+        attr_model,
+        strategy,
+        dest_event,
+        attr_event,
+        COUNT(*) AS event_cnt,
+        COUNT(DISTINCT guid) AS user_cnt,
+        SUM(weight) AS weight
+    FROM dws.dws_attribution_compute
+    WHERE attr_model = '优惠券获取归因分析' AND strategy = '线性归因' AND dt = '2024-07-06'
+    GROUP BY attr_model, strategy, dest_event, attr_event
+) AS t;
+
+select * from ads.ads_attribution_coupon_fetch;
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_cart_category_price_cnt (
+    calc_dt        STRING COMMENT '统计日期',
+    category1_name STRING COMMENT '一级分类',
+    category2_name STRING COMMENT '二级分类',
+    category3_name STRING COMMENT '三级分类',
+    1_10_num       BIGINT COMMENT '1~10元加入购物车数量',
+    10_100_num     BIGINT COMMENT '10~100元加入购物车数量',
+    100_500_num    BIGINT COMMENT '100~500元加入购物车数量',
+    500_1000_num   BIGINT COMMENT '500~1000元加入购物车数量',
+    `1000+_num`    BIGINT COMMENT '1000+元加入购物车数量'
+)
+COMMENT '商品加购数量各分类加购价位分布'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_cart_category_price_cnt';
+
+
+INSERT INTO TABLE ads.ads_cart_category_price_cnt
+SELECT
+    '2024-07-06' AS calc_dt,
+    t2.category1_name,
+    t2.category2_name,
+    t2.category3_name,
+    SUM(IF(t2.sku_price >= 1 AND t2.sku_price < 10, t1.cart_add_num_1d, 0)) AS 1_10_num,
+    SUM(IF(t2.sku_price >= 10 AND t2.sku_price < 100, t1.cart_add_num_1d, 0)) AS 10_100_num,
+    SUM(IF(t2.sku_price >= 100 AND t2.sku_price < 500, t1.cart_add_num_1d, 0)) AS 100_500_num,
+    SUM(IF(t2.sku_price >= 500 AND t2.sku_price < 1000, t1.cart_add_num_1d, 0)) AS 500_1000_num,
+    SUM(IF(t2.sku_price >= 1000, t1.cart_add_num_1d, 0)) AS `1000+_num`
+FROM dws.dws_cart_user_add_1d AS t1
+LEFT JOIN dim.dim_sku_full AS t2
+WHERE t1.dt = '2024-07-06' AND t2.dt = '2024-07-06' AND t1.sku_id = t2.id
+GROUP BY t2.category1_name, t2.category2_name, t2.category3_name;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_cart_goods_top10 (
+    calc_dt  STRING COMMENT '统计日期',
+    sku_id   STRING COMMENT '商品ID',
+    sku_name STRING COMMENT '商品名称',
+    cart_num BIGINT COMMENT '加入购物车数量',
+    ranking  INT COMMENT '排名'
+)
+COMMENT '商品加购数量Top10日排名表'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_cart_goods_top10';
+
+
+INSERT INTO TABLE ads.ads_cart_goods_top10
+SELECT
+    calc_dt,
+    sku_id,
+    sku_name,
+    cart_num,
+    ROW_NUMBER() OVER(ORDER BY cart_num DESC) AS ranking
+FROM (
+    SELECT
+        '2024-07-06' AS calc_dt,
+        sku_id,
+        MAX(sku_name) AS sku_name,
+        SUM(cart_add_num_1d) AS cart_num
+    FROM dws.dws_cart_user_add_1d
+    WHERE dt = '2024-07-06'
+    GROUP BY sku_id
+) AS a
+LIMIT 10;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_cart_region_cnt (
+    calc_dt  STRING COMMENT '统计日期',
+    province STRING COMMENT '省份',
+    city     STRING COMMENT '城市',
+    region   STRING COMMENT '地区',
+    cart_num BIGINT COMMENT '加入购物车数量'
+)
+COMMENT '商品加购数量地区分布表'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_cart_region_cnt';
+
+
+INSERT INTO TABLE ads.ads_cart_region_cnt
+SELECT
+	'2024-07-06' AS calc_dt,
+	province,
+	city,
+	region,
+	SUM(cart_add_num_1d) AS cart_num
+FROM dws.dws_cart_user_add_1d
+WHERE dt = '2024-07-06'
+GROUP BY province, city, region;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_coupon_stats_30d (
+    calc_dt     STRING COMMENT '统计日期',
+    coupon_id   STRING COMMENT '优惠券ID',
+    coupon_name STRING COMMENT '优惠券名称',
+    start_date  STRING COMMENT '优惠券发布日期',
+    rule_name   STRING COMMENT '优惠规则，例如满x元减x元，满x件打x折，减x元，打x折',
+    reduce_rate DECIMAL(16, 2) COMMENT '补贴率，补贴率 = 总优惠金额 / 总交易额'
+)
+COMMENT '最近30日发布的优惠券的补贴率表'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_coupon_stats_30d';
+
+
+INSERT OVERWRITE TABLE ads.ads_coupon_stats_30d
+SELECT * FROM ads.ads_coupon_stats_30d
+UNION ALL
+SELECT
+    '2024-07-06' AS calc_dt,
+    co.coupon_id,
+    co.coupon_name,
+    c.create_time AS start_date,
+    co.coupon_rule,
+    ROUND(co.coupon_reduce_amount_30d / co.original_amount_30d, 2) AS reduce_rate
+FROM dws.dws_coupon_order_30d AS co
+LEFT JOIN dim.dim_coupon_full c ON co.coupon_id = c.id
+WHERE co.dt = '2024-07-06';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_funnel_conversion_rate (
+    calc_dt      STRING COMMENT '统计日期',
+    funnel_model STRING COMMENT '漏斗模型名称',
+    step         INT COMMENT '步骤',
+    step_cnt     BIGINT COMMENT '步骤人数',
+    rate         DOUBLE COMMENT '转化率'
+)
+COMMENT '漏斗模型转化率表'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_funnel_conversion_rate';
+
+-- 根据日期每天增量拉取计算
+WITH funnel AS (
+    SELECT
+        funnel_model,
+        SUM(IF(max_step >= 1, 1, 0)) AS step1,
+        SUM(IF(max_step >= 2, 1, 0)) AS step2,
+        SUM(IF(max_step >= 3, 1, 0)) AS step3
+    FROM dws.dws_funnel_compute_step
+    WHERE dt = '2024-07-06'
+    GROUP BY funnel_model
+),
+format_funnel AS (
+    SELECT
+        funnel_model,
+        step,
+        step_cnt
+    FROM funnel
+    LATERAL VIEW EXPLODE(MAP(1,step1, 2,step2, 3,step3)) exploded_table AS step, step_cnt
+)
+INSERT INTO TABLE ads.ads_funnel_conversion_rate
+SELECT
+    '2024-07-06' AS calc_dt,
+    funnel_model,
+    step,
+    step_cnt,
+    -- 方案一：每一步人数都和第一步人数进行计算
+    ROUND(step_cnt / FIRST_VALUE(step_cnt) OVER (PARTITION BY funnel_model ORDER BY step), 2) AS rate
+    -- 方案二：每一步人数和上一步人数进行计算
+    -- LAG(COL, N, DEFAULT_VAL)：往前第 N 行数据，没有数据的话用 DEFAULT_VAL 代替
+    -- ROUND(step_cnt / LAG(step_cnt, 1, step_cnt) OVER (PARTITION BY funnel_model ORDER BY step), 2) AS rate
+FROM format_funnel;
+
+select * from ads.ads_funnel_conversion_rate;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_goods_category_top10 (
+    calc_dt       STRING COMMENT '统计日期',
+    goods_id      BIGINT COMMENT '商品ID',
+    category_id   STRING COMMENT '分类ID',
+    category_name STRING COMMENT '分类名称',
+    goods_name    STRING COMMENT '商品名称',
+    goods_total   BIGINT COMMENT '商品销量',
+    ranking       INT COMMENT '排名'
+)
+COMMENT '商品一级分类销量Top10排名表'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_goods_category_top10';
+
+
+INSERT INTO TABLE ads.ads_goods_category_top10
+SELECT
+    calc_dt,
+    goods_id,
+    category1_id,
+    category1_name,
+    goods_name,
+    goods_total,
+    ranking
+FROM (
+    SELECT
+        '2024-07-06' AS calc_dt,
+        a.goods_id,
+        a.category1_id,
+        a.category1_name,
+        a.goods_name,
+        a.goods_total,
+        ROW_NUMBER() OVER(PARTITION BY category1_id ORDER BY goods_total DESC) AS ranking
+    FROM (
+        SELECT
+            t1.goods_id,
+            t2.category1_id,
+            t2.category1_name,
+            t1.goods_name,
+            t1.goods_total
+        FROM dws.dws_goods_topic t1 -- 商品主题表
+        LEFT JOIN dim.dim_sku_full t2 -- 商品SKU维度表
+        WHERE t1.dt = '2024-07-06' AND t2.dt = '2024-07-06' AND t1.category1_id = t2.category1_id
+    ) AS a
+) AS b
+WHERE ranking <= 10;
+
+select * from ads.ads_goods_category_top10;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_goods_total_sale (
+    calc_dt         STRING COMMENT '统计日期',
+    goods_all_total BIGINT COMMENT '商品销售总量',
+    goods_all_sale  DOUBLE COMMENT '商品销售总额'
+)
+COMMENT '当日商品总销量与销售总额表'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_goods_total_sale';
+
+
+INSERT INTO TABLE ads.ads_goods_total_sale
+SELECT
+    dt AS calc_dt,
+    SUM(goods_total) AS goods_all_total,
+    SUM(goods_sale) AS goods_all_sale
+FROM dws.dws_goods_topic
+WHERE dt = '2024-07-06'
+GROUP BY dt;
+
+select * from ads.ads_goods_total_sale;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_goods_total_top10 (
+    calc_dt     STRING COMMENT '统计日期',
+    goods_id    BIGINT COMMENT '商品ID',
+    goods_name  STRING COMMENT '商品名称',
+    goods_type  STRING COMMENT '商品类别',
+    goods_total BIGINT COMMENT '商品销量',
+    ranking     INT COMMENT '排名'
+)
+COMMENT '商品销量Top10排名表'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_goods_total_top10';
+
+
+INSERT INTO TABLE ads.ads_goods_total_top10
+SELECT
+    dt AS calc_dt,
+    goods_id,
+    goods_name,
+    goods_type,
+    goods_total AS goods_total,
+    ROW_NUMBER() OVER(ORDER BY goods_total DESC) AS ranking
+FROM dws.dws_goods_topic
+WHERE goods_total IS NOT NULL AND dt = '2024-07-06'
+LIMIT 10;
+
+select * from ads.ads_goods_total_top10;
+
+drop table ads.ads_goods_total_top10;
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_order_stats (
+    calc_dt            STRING COMMENT '统计日期',
+    order_total_amount DECIMAL(16, 2) COMMENT '订单总金额,GMV',
+    sku_cnt            BIGINT COMMENT '下单总件数',
+    order_user_cnt     BIGINT COMMENT '下单总人数',
+    order_cnt          BIGINT COMMENT '下单总次数'
+)
+COMMENT '当日交易综合统计表'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_order_stats';
+
+-- 根据日期每天增量拉取计算
+INSERT INTO TABLE ads.ads_order_stats
+SELECT
+    '2024-07-06' AS calc_dt,
+    SUM(order_total_amount_1d) AS order_total_amount, -- GMV
+    SUM(order_num_1d) AS sku_cnt, -- 下单总件数
+    COUNT(DISTINCT member_id) AS order_user_cnt, -- 下单总人数
+    -- 这里为什么不从 dws_order_user_sku_order_1d 获取下单总次数，因为需要解决 Reaggregation 问题
+    MAX(order_cnt) AS order_cnt -- 下单总次数，此处的 MAX 是因为分组后无法直接获取该列而加的组函数
+FROM dws.dws_order_user_sku_order_1d
+-- 关联订单拉链表获取下单总次数
+LEFT JOIN (
+    SELECT COUNT(DISTINCT sn) AS order_cnt -- COUNT(DISTINCT 订单编号)
+    FROM dwd.dwd_yjx_order_zip
+    WHERE zip_start_dt = '2024-07-06' AND zip_end_dt = '9999-12-31'
+) AS order_zip
+WHERE dt = '2024-07-06';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_path_ss_cnt (
+    calc_dt     STRING COMMENT '统计日期',
+    step        INT COMMENT '访问步骤',
+    page        STRING COMMENT '访问页',
+    ref_page    STRING COMMENT '前一页',
+    path_ss_cnt BIGINT COMMENT '路径会话数',
+    step_ss_cnt BIGINT COMMENT '步骤会话数',
+    page_ss_cnt BIGINT COMMENT '页面会话数'
+)
+COMMENT '访问路径会话统计表'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_path_ss_cnt';
+
+-- 参考 SQL：一层层上卷即可得到更粗粒度的结果，但是由于分组的原因，无法获取所有列
+-- /search/s?,1709
+-- coupon.yjxxt.com/,3701
+-- xxx.html,x
+SELECT
+    page,
+    SUM(step_ss_cnt) AS page_ss_cnt
+FROM (
+    -- 1,/search/s?,568
+    -- 2,/search/s?,382
+    -- n,/search/s?,x
+    -- 1,coupon.yjxxt.com/,1267
+    -- 2,coupon.yjxxt.com/,799
+    -- n,coupon.yjxxt.com/,x
+    SELECT
+        step,
+        page,
+        SUM(path_ss_cnt) AS step_ss_cnt
+    FROM (
+        -- 1,/search/s?,NULL,568
+        -- 2,/search/s?,miaosha.yjxxt.com/newBrand.html,40
+        -- n,/search/s?,xxx.html,x
+        -- 1,coupon.yjxxt.com/,NULL,1267
+        -- 2,coupon.yjxxt.com/,yjxxt.com/,36
+        -- n,coupon.yjxxt.com/,xxx.html,x
+        SELECT
+            step,
+            page,
+            ref_page,
+            COUNT(DISTINCT splitSessionId) AS path_ss_cnt
+        FROM dws.dws_path_acc_detail
+        WHERE dt = '2024-07-06'
+        GROUP BY page, step, ref_page
+        ORDER BY page, step
+    ) AS t
+    GROUP BY page, step
+    ORDER BY page, step
+) AS t2
+GROUP BY page
+ORDER BY page;
+
+-- 完整 SQL 如下，使用 SUM() OVER() 开窗上卷，可以拿到所有列
+-- 1,/search/s?,,568,568,1709
+-- 2,/search/s?,miaosha.yjxxt.com/newBrand.html,40,382,1709
+-- 1,coupon.yjxxt.com/,,1267,1267,3701
+-- 2,coupon.yjxxt.com/,yjxxt.com/,36,799,3701
+WITH tmp AS (
+    SELECT
+        step,
+        page,
+        ref_page,
+        COUNT(DISTINCT splitSessionId) AS path_ss_cnt
+    FROM dws.dws_path_acc_detail
+    WHERE dt = '2024-07-06'
+    GROUP BY page, step, ref_page
+)
+INSERT overwrite TABLE ads.ads_path_ss_cnt
+SELECT
+    '2024-07-06' as calc_dt,
+    step,
+    page,
+    ref_page,
+    path_ss_cnt,
+    -- 上卷为 page, step
+    SUM(path_ss_cnt)
+        OVER(PARTITION BY page, step ORDER BY page, step ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS step_ss_cnt,
+    -- 上卷为 page
+    SUM(path_ss_cnt)
+        OVER(PARTITION BY page ORDER BY page ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS page_ss_cnt
+FROM tmp;
+
+select * from ads.ads_path_ss_cnt;
+
+-- 可以使用以下 SQL 验证结果
+WITH tmp AS (
+    SELECT
+        step,
+        page,
+        ref_page,
+        COUNT(DISTINCT splitSessionId) AS path_ss_cnt
+    FROM dws.dws_path_acc_detail
+    WHERE dt = '2024-07-06'
+    GROUP BY page, step, ref_page
+),
+result AS (
+    SELECT
+        step,
+        page,
+        ref_page,
+        path_ss_cnt,
+        -- 上卷为 page, step
+        SUM(path_ss_cnt)
+            OVER(PARTITION BY page, step ORDER BY page, step ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS step_ss_cnt,
+        -- 上卷为 page
+        SUM(path_ss_cnt)
+            OVER(PARTITION BY page ORDER BY page ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS page_ss_cnt
+    FROM tmp
+)
+SELECT * FROM result WHERE step = 1 AND page = "coupon.yjxxt.com/";
+
+-- 或者使用 COUNT() OVER() 开窗上卷
+-- 因为 Spark 不支持 COUNT(DISTINCT) OVER()，所以再套一层查询利用分组去重
+WITH tmp AS (
+    SELECT
+        step,
+        page,
+        ref_page,
+        COUNT(splitSessionId) OVER(PARTITION BY page, step, ref_page) AS path_ss_cnt,
+        COUNT(splitSessionId) OVER(PARTITION BY page, step) AS step_ss_cnt,
+        COUNT(splitSessionId) OVER(PARTITION BY page) AS page_ss_cnt
+    FROM dws.dws_path_acc_detail
+    WHERE dt = '2024-07-06'
+)
+SELECT
+    step,
+    page,
+    ref_page,
+    path_ss_cnt,
+    step_ss_cnt,
+    page_ss_cnt
+FROM tmp
+GROUP BY step, page, ref_page, page_ss_cnt, step_ss_cnt, path_ss_cnt;
+
+-- 可以使用以下 SQL 验证结果
+WITH tmp AS (
+    SELECT
+        step,
+        page,
+        ref_page,
+        COUNT(splitSessionId) OVER(PARTITION BY page, step, ref_page) AS path_ss_cnt,
+        COUNT(splitSessionId) OVER(PARTITION BY page, step) AS step_ss_cnt,
+        COUNT(splitSessionId) OVER(PARTITION BY page) AS page_ss_cnt
+    FROM dws.dws_path_acc_detail
+    WHERE dt = '2024-07-06'
+),
+result AS (
+    SELECT
+        step,
+        page,
+        ref_page,
+        path_ss_cnt,
+        step_ss_cnt,
+        page_ss_cnt
+    FROM tmp
+    GROUP BY step, page, ref_page, page_ss_cnt, step_ss_cnt, path_ss_cnt
+)
+SELECT * FROM result WHERE step = 1 AND page = "coupon.yjxxt.com/";
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_profile_favorite_tag (
+    member_id           STRING COMMENT '用户ID',
+    common_brand        STRING COMMENT '最常购买品牌名称',
+    common_1st_category STRING COMMENT '最常购买一级商品分类名称',
+    common_2nd_category STRING COMMENT '最常购买二级商品分类名称',
+    common_3rd_category STRING COMMENT '最常购买三级商品分类名称'
+)
+COMMENT '用户购物偏好画像标签表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression' = 'SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_profile_favorite_tag';
+
+
+WITH order_item AS (
+    SELECT
+        member_id,
+        brand_name,
+        category1_name,
+        category2_name,
+        category3_name
+    FROM dwd.dwd_yjx_order_item_inc AS o
+    LEFT JOIN dim.dim_sku_full AS sku ON o.sku_id = sku.id
+    -- 最近30日。如果要统计全部数据，注释 WHERE 子句
+    WHERE DATEDIFF('2024-07-06', o.dt) <= 30 AND DATEDIFF('2024-07-06', sku.dt) <= 30
+),
+brand AS (
+    SELECT
+        member_id,
+        brand_name AS common_brand
+    FROM (
+        SELECT
+            member_id,
+            brand_name,
+            ROW_NUMBER() OVER(PARTITION BY member_id ORDER BY brand_cnt DESC) AS r
+        FROM (
+            SELECT
+                member_id,
+                brand_name, -- 品牌
+                COUNT(*) AS brand_cnt
+            FROM order_item
+            GROUP BY member_id, brand_name
+        ) AS a
+    ) AS b
+    WHERE r = 1 -- 取第一就是最常用的品牌
+),
+1st_category AS (
+    SELECT
+        member_id,
+        category1_name AS common_1st_category
+    FROM (
+        SELECT
+            member_id,
+            category1_name,
+            ROW_NUMBER() OVER(PARTITION BY member_id ORDER BY category1_cnt DESC) AS r
+        FROM (
+            SELECT
+                member_id,
+                category1_name, -- 一级分类
+                COUNT(*) AS category1_cnt
+            FROM order_item
+            GROUP BY member_id, category1_name
+        ) AS a
+    ) AS b
+    WHERE r = 1 -- 取第一就是最常用的一级分类
+),
+2nd_category AS (
+    SELECT
+        member_id,
+        category2_name AS common_2nd_category
+    FROM (
+        SELECT
+            member_id,
+            category2_name,
+            ROW_NUMBER() OVER(PARTITION BY member_id ORDER BY category2_cnt DESC) AS r
+        FROM (
+            SELECT
+                member_id,
+                category2_name, -- 二级分类
+                COUNT(*) AS category2_cnt
+            FROM order_item
+            GROUP BY member_id, category2_name
+        ) AS a
+    ) AS b
+    WHERE r = 1 -- 取第一就是最常用的二级分类
+),
+3rd_category AS (
+    SELECT
+        member_id,
+        category3_name AS common_3rd_category
+    FROM (
+        SELECT
+            member_id,
+            category3_name,
+            ROW_NUMBER() OVER(PARTITION BY member_id ORDER BY category3_cnt DESC) AS r
+        FROM (
+            SELECT
+                member_id,
+                category3_name, -- 三级分类
+                COUNT(*) AS category3_cnt
+            FROM order_item
+            GROUP BY member_id, category3_name
+        ) AS a
+    ) AS b
+    WHERE r = 1 -- 取第一就是最常用的三级分类
+)
+INSERT INTO TABLE ads.ads_profile_favorite_tag PARTITION (dt = '2024-07-06')
+SELECT
+    o.member_id,
+    brand.common_brand,
+    c1.common_1st_category,
+    c2.common_2nd_category,
+    c3.common_3rd_category
+FROM order_item AS o
+LEFT JOIN brand ON o.member_id = brand.member_id
+LEFT JOIN 1st_category AS c1 ON o.member_id = c1.member_id
+LEFT JOIN 2nd_category AS c2 ON o.member_id = c2.member_id
+LEFT JOIN 3rd_category AS c3 ON o.member_id = c3.member_id;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_profile_order_tag (
+    -- 查询订单拉链表，按 member_id 分组
+    member_id                STRING COMMENT '用户ID',
+    first_order_time         STRING COMMENT '首单日期',
+    last_order_time          STRING COMMENT '末单日期',
+    first_order_ago          BIGINT COMMENT '首单距今时间',
+    last_order_ago           BIGINT COMMENT '末单距今时间',
+    month1_order_cnt         BIGINT COMMENT '近30天下单总次数',
+    month1_order_amt         DOUBLE COMMENT '近30天购买总金额',
+    month2_order_cnt         BIGINT COMMENT '近60天购买总次数',
+    month2_order_amt         DOUBLE COMMENT '近60天购买总金额',
+    month3_order_cnt         BIGINT COMMENT '近90天购买总次数',
+    month3_order_amt         DOUBLE COMMENT '近90天购买总金额',
+    max_order_amt            DOUBLE COMMENT '最大订单金额',
+    min_order_amt            DOUBLE COMMENT '最小订单金额',
+    total_order_cnt          BIGINT COMMENT '累计消费次数',
+    total_order_amt          DOUBLE COMMENT '累计消费金额',
+    total_coupon_amt         DOUBLE COMMENT '累计使用代金券金额',
+    -- 查询订单拉链表，按 member_id, consignee_address_path 分组
+    common_address           STRING COMMENT '常用收货地址',
+    -- 查询订单拉链表，按 member_id, payment_method 分组
+    common_paytype           STRING COMMENT '常用支付方式',
+    -- 查询购物车表，按 member_id 分组
+    month1_cart_cnt_30       BIGINT COMMENT '最近30天加购次数',
+    month1_cart_goods_cnt_30 BIGINT COMMENT '最近30天加购商品件数'
+)
+COMMENT '用户订单画像标签表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression' = 'SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_profile_order_tag';
+
+
+WITH order_zip AS (
+    SELECT
+        member_id,
+        MIN(create_time) AS first_order_time, -- MIN(订单创建时间)
+        MAX(create_time) AS last_order_time, -- MAX(订单创建时间)
+        -- COUNT( IF(当前日期与订单创建日期的差值 <= 30, 1, NULL) )
+        COUNT(IF(DATEDIFF('2024-07-06', create_time) <= 30, 1, NULL)) AS month1_order_cnt,
+        -- SUM( IF(当前日期与订单创建日期的差值 <= 30，总价格flow_price - 优惠金额discount_price, NULL) )
+        SUM(IF(DATEDIFF('2024-07-06', create_time) <= 30, flow_price - NVL(discount_price, 0), NULL)) AS month1_order_amt,
+        -- COUNT( IF(当前日期与订单创建日期的差值 <= 60, 1, NULL) )
+        COUNT(IF(DATEDIFF('2024-07-06', create_time) <= 60, 1, NULL)) AS month2_order_cnt,
+        -- SUM( IF(当前日期与订单创建日期的差值 <= 60，总价格flow_price - 优惠金额discount_price, NULL) )
+        SUM(IF(DATEDIFF('2024-07-06', create_time) <= 60, flow_price - NVL(discount_price, 0), NULL)) AS month2_order_amt,
+        -- COUNT( IF(当前日期与订单创建日期的差值 <= 90, 1, NULL) )
+        COUNT(IF(DATEDIFF('2024-07-06', create_time) <= 90, 1, NULL)) AS month3_order_cnt,
+        -- SUM( IF(当前日期与订单创建日期的差值 <= 90，总价格flow_price - 优惠金额discount_price, NULL) )
+        SUM(IF(DATEDIFF('2024-07-06', create_time) <= 90, flow_price - NVL(discount_price, 0), NULL)) AS month3_order_amt,
+        MAX(flow_price - NVL(discount_price, 0)) AS max_order_amt, -- 最大订单金额
+        MIN(flow_price - NVL(discount_price, 0)) AS min_order_amt, -- 最小订单金额
+        COUNT(*) AS total_order_cnt, -- 累计消费次数
+        SUM(flow_price - NVL(discount_price, 0)) AS total_order_amt, -- 累计消费金额
+        SUM(NVL(discount_price, 0)) AS total_coupon_amt -- 累计使用代金券金额
+    FROM dwd.dwd_yjx_order_zip
+    -- 最近30日
+    WHERE zip_start_dt >= DATE_SUB('2024-07-06', 29) AND zip_start_dt <= '2024-07-06'
+    GROUP BY member_id
+),
+address AS (
+    SELECT
+        member_id,
+        consignee_address_path AS common_address
+    FROM (
+        SELECT
+            member_id,
+            consignee_address_path,
+            ROW_NUMBER() OVER(PARTITION BY member_id ORDER BY addr_cnt DESC) AS r
+        FROM (
+            SELECT
+                member_id,
+                consignee_address_path, -- 收获地址
+                COUNT(*) AS addr_cnt
+            FROM dwd.dwd_yjx_order_zip
+            WHERE zip_start_dt >= DATE_SUB('2024-07-06', 29) AND zip_start_dt <= '2024-07-06'
+            GROUP BY member_id, consignee_address_path
+        ) AS a
+    ) AS b
+    WHERE r = 1 -- 取第一就是最常用的收获地址
+),
+payment AS (
+    SELECT
+        member_id,
+        payment_method AS common_paytype
+    FROM (
+        SELECT
+            member_id,
+            payment_method,
+            ROW_NUMBER() OVER(PARTITION BY member_id ORDER BY payment_cnt DESC) AS r
+        FROM (
+            SELECT
+                member_id,
+                payment_method, -- 支付方式
+                COUNT(*) AS payment_cnt
+            FROM dwd.dwd_yjx_order_zip
+            WHERE zip_start_dt >= DATE_SUB('2024-07-06', 29) AND zip_start_dt <= '2024-07-06'
+            GROUP BY member_id, payment_method
+        ) AS a
+    ) AS b
+    WHERE r = 1 -- 取第一就是最常用的支付方式
+),
+cart AS (
+    SELECT
+        member_id,
+        COUNT(*) AS month1_cart_cnt_30, -- 加购次数
+        SUM(sku_num) AS month1_cart_goods_cnt_30 -- 加购件数
+    FROM dwd.dwd_yjx_cart_inc
+    WHERE DATEDIFF('2024-07-06', dt) <= 30
+    GROUP BY member_id
+),
+member AS (
+    -- 有订单未必加购过，加购过未必提交了订单，所以 UNION 合并两种操作的用户，即可得到最全的用户信息
+    -- 查询最近30日有过订单的用户
+    SELECT member_id FROM dwd.dwd_yjx_order_zip
+    WHERE zip_start_dt >= DATE_SUB('2024-07-06', 29) AND zip_start_dt <= '2024-07-06'
+    UNION
+    -- 查询最近30日有过加购的用户
+    SELECT member_id FROM dwd.dwd_yjx_cart_inc
+    WHERE DATEDIFF('2024-07-06', dt) <= 30
+)
+INSERT INTO TABLE ads.ads_profile_order_tag PARTITION (dt = '2024-07-06')
+SELECT
+    member.member_id,
+    first_order_time,
+    last_order_time,
+    DATEDIFF('2024-07-06', first_order_time) AS first_order_ago, -- 首单距今时间
+    DATEDIFF('2024-07-06', last_order_time) AS last_order_ago, -- 末单距今时间
+    month1_order_cnt,
+    month1_order_amt,
+    month2_order_cnt,
+    month2_order_amt,
+    month3_order_cnt,
+    month3_order_amt,
+    max_order_amt,
+    min_order_amt,
+    total_order_cnt,
+    total_order_amt,
+    total_coupon_amt,
+    common_address,
+    common_paytype,
+    month1_cart_cnt_30,
+    month1_cart_goods_cnt_30
+-- 用最全的用户信息去 LEFT JOIN 其他表
+FROM member
+LEFT JOIN order_zip ON member.member_id = order_zip.member_id
+LEFT JOIN address ON member.member_id = address.member_id
+LEFT JOIN payment ON member.member_id = payment.member_id
+LEFT JOIN cart ON member.member_id = cart.member_id;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_traffic_cube (
+    appId           STRING COMMENT 'AppID',
+    appVersion      STRING COMMENT 'App版本',
+    carrier         STRING COMMENT '运营商',
+    deviceType      STRING COMMENT '设备类型',
+    netType         STRING COMMENT '网络类型',
+    osName          STRING COMMENT '手机操作系统',
+    province        STRING COMMENT '省',
+    city            STRING COMMENT '市',
+    region          STRING COMMENT '县（区）',
+    isNew           INT COMMENT '是否新用户，1 为新用户，0 为老用户',
+    enter_page_id   STRING COMMENT '入口页面 ID',
+    exit_page_id    STRING COMMENT '出口页面 ID',
+    is_jumpout      STRING COMMENT '是否跳出会话',
+    pv_cnt          BIGINT COMMENT 'PV 总数',
+    uv_cnt          BIGINT COMMENT 'UV 总数',
+    ip_cnt          BIGINT COMMENT 'IP 总数',
+    session_cnt     BIGINT COMMENT '会话总数',
+    jpt_session_cnt BIGINT COMMENT '跳出会话总数',
+    acc_tml         BIGINT COMMENT '访问页面总时长',
+    avg_session_tml BIGINT COMMENT '会话平均访问时长'
+)
+COMMENT '地域属性多维流量统计Cube表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_traffic_cube';
+
+-- 根据日期每天增量拉取计算
+WITH temp AS (
+    SELECT
+        NVL(account, 'UNKNOWN')            AS account,
+        NVL(appId, 'UNKNOWN')              AS appId,
+        NVL(appVersion, 'UNKNOWN')         AS appVersion,
+        NVL(carrier, 'UNKNOWN')            AS carrier,
+        NVL(deviceType, 'UNKNOWN')         AS deviceType,
+        NVL(eventId, 'UNKNOWN')            AS eventId,
+        NVL(ip, 'UNKNOWN')                 AS ip,
+        NVL(latitude, 'UNKNOWN')           AS latitude,
+        NVL(longitude, 'UNKNOWN')          AS longitude,
+        NVL(netType, 'UNKNOWN')            AS netType,
+        NVL(osName, 'UNKNOWN')             AS osName,
+        NVL(osVersion, 'UNKNOWN')          AS osVersion,
+        NVL(resolution, 'UNKNOWN')         AS resolution,
+        NVL(ts, 'UNKNOWN')                 AS ts,
+        NVL(splitSessionId, 'UNKNOWN')     AS splitSessionId,
+        NVL(province, 'UNKNOWN')           AS province,
+        NVL(city, 'UNKNOWN')               AS city,
+        NVL(region, 'UNKNOWN')             AS region,
+        NVL(filledAccount, 'UNKNOWN')      AS filledAccount,
+        NVL(guid, 'UNKNOWN')               AS guid,
+        CAST(NVL(isNew, 'UNKNOWN') AS INT) AS isNew,
+        NVL(enter_page_id, 'UNKNOWN')      AS enter_page_id,
+        NVL(exit_page_id, 'UNKNOWN')       AS exit_page_id,
+        NVL(start_time, 'UNKNOWN')         AS start_time,
+        NVL(end_time, 'UNKNOWN')           AS end_time,
+        NVL(is_jumpout, 'UNKNOWN')         AS is_jumpout,
+        NVL(ss_pv_cnt, 'UNKNOWN')          AS pv_cnt,
+        NVL(page_acc_tml, 'UNKNOWN')       AS page_acc_tml
+    FROM dws.dws_traffic_detail
+    WHERE dt = '2024-07-06'
+)
+INSERT INTO TABLE ads.ads_traffic_cube PARTITION (dt='2024-07-06')
+SELECT
+    appId,
+    appVersion,
+    carrier,
+    deviceType,
+    netType,
+    osName,
+    province,
+    city,
+    region,
+    isNew,
+    enter_page_id,
+    exit_page_id,
+    is_jumpout,
+    SUM(pv_cnt)                                                AS pv_cnt,
+    COUNT(DISTINCT guid)                                       AS uv_cnt,
+    COUNT(DISTINCT ip)                                         AS ip_cnt,
+    COUNT(DISTINCT splitSessionId)                             AS session_cnt,
+    COUNT(DISTINCT IF(is_jumpout = 'Y', splitSessionId, NULL)) AS jpt_session_cnt,
+    SUM(page_acc_tml)                                          AS acc_tml,
+    SUM(page_acc_tml) / COUNT(DISTINCT splitSessionId)         AS avg_session_tml
+FROM temp
+GROUP BY
+    appId,                    -- App ID
+    appVersion,               -- App 版本
+    carrier,                  -- 运营商
+    deviceType,               -- 设备类型
+    netType,                  -- 网络类型
+    osName,                   -- 手机操作系统名称
+    province,                 -- 省
+    city,                     -- 市
+    region,                   -- 区域
+    isNew,                    -- 是否新用户
+    enter_page_id,            -- 入口页面 ID
+    exit_page_id,             -- 出口页面 ID
+    is_jumpout                -- 是否跳出
+GROUPING SETS (
+    (appId),                  -- App ID
+    (appId, appVersion),      -- 应用 ID，App 版本
+    (osName),                 -- 手机操作系统名称
+    (carrier, deviceType),    -- 运营商，设备类型
+    (carrier, netType),       -- 运营商，网络类型
+    (province),               -- 省
+    (province, city),         -- 省，市
+    (province, city, region), -- 省，市，区域
+    (isNew),                  -- 是否新用户
+    (province, isNew),        -- 省，是否新用户
+    (enter_page_id),          -- 入口页面 ID
+    (exit_page_id),           -- 出口页面 ID
+    (is_jumpout),             -- 是否跳出
+    ()
+);
+
+select count(*) from ads.ads_traffic_cube ;
+
+CREATE DATABASE IF NOT EXISTS ads;
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_traffic_province (
+    calc_dt         STRING COMMENT '统计日期',
+    province        STRING COMMENT '省',
+    pv_cnt          BIGINT COMMENT 'PV 总数',
+    uv_cnt          BIGINT COMMENT 'UV 总数',
+    ip_cnt          BIGINT COMMENT 'IP 总数',
+    session_cnt     BIGINT COMMENT '会话总数',
+    jpt_session_cnt BIGINT COMMENT '跳出会话总数',
+    acc_tml         BIGINT COMMENT '访问页面总时长'
+)
+COMMENT '省维度流量统计表'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_traffic_province';
+
+-- 根据日期每天增量拉取计算
+INSERT INTO TABLE ads.ads_traffic_province
+SELECT
+    '2024-07-06' AS calc_dt,
+    province,
+    COUNT(*) AS pv_cnt,
+    COUNT(DISTINCT guid) AS uv_cnt,
+    COUNT(DISTINCT ip) AS ip_cnt,
+    COUNT(DISTINCT splitSessionId) AS session_cnt,
+    COUNT(DISTINCT IF(is_jumpout = 'Y', splitSessionId, NULL)) AS jpt_session_cnt,
+    SUM(page_acc_tml) AS acc_tml
+FROM dws.dws_traffic_detail
+WHERE dt = '2024-07-06'
+GROUP BY province;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_traffic_province_cuboid (
+    deviceType STRING COMMENT '设备类型',
+    province   STRING COMMENT '省',
+    isNew      INT COMMENT '是否新用户，1 为新用户，0 为老用户',
+    pv_cnt     BIGINT COMMENT 'PV 总数',
+    uv_bitmap  BINARY COMMENT 'UV Bitmap',
+    uv_cnt     BIGINT COMMENT 'UV 总数',
+    acc_tml    BIGINT COMMENT '访问页面总时长'
+)
+COMMENT '省维度流量统计Bitmap表'
+PARTITIONED BY (dt STRING)
+STORED AS PARQUET
+TBLPROPERTIES ('parquet.compression'='SNAPPY')
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_traffic_province_cuboid';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_user_active_cnt (
+    calc_dt     STRING COMMENT '统计日期',
+    day_count   BIGINT COMMENT '当日用户数量',
+    wk_count    BIGINT COMMENT '当周用户数量',
+    mn_count    BIGINT COMMENT '当月用户数量',
+    is_weekend  STRING COMMENT '是否是周末Y,N，用于得到本周最终结果',
+    is_monthend STRING COMMENT '是否是月末Y,N，用于得到本月最终结果'
+)
+COMMENT '活跃用户数表'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_user_active_cnt';
+
+-- 计算上一日的用户数量，并判断是否是周末和月末
+WITH day_date AS (
+    -- 计算上一日的活跃用户数
+    SELECT guid
+    FROM dws.dws_user_dau_bitmap_30d
+    -- 参数 30，表示第 30 天也就是上一日。还有因为第一天是从 2^0 开始计算，所以第 30 天就是 2^29
+    WHERE (CAST(bitmap AS BIGINT) & CAST(POW(2, 30 - 1) AS BIGINT)) > 0
+),
+day_result AS (
+    SELECT
+        '2024-07-30' AS dt,
+        COUNT(DISTINCT guid) AS day_count,
+        -- DAYOFWEEK：返回指定日期的星期，1 表示星期天，7 表示星期六
+        IF(DAYOFWEEK('2024-07-30') IN (1), 'Y', 'N') AS is_weekend,
+        IF(LAST_DAY('2024-07-30') = '2024-07-30', 'Y', 'N') AS is_monthend
+    FROM day_date
+),
+-- 计算上一日所在自然周（周一到周日）的用户数量
+week_active_dates AS (
+    SELECT
+        guid,
+        DATE_ADD(NEXT_DAY('2024-07-30', 'MO') - 7, bit_pos) AS active_date
+    FROM dws.dws_user_dau_bitmap_30d
+    LATERAL VIEW POSEXPLODE(
+        SPLIT(LPAD(BIN(bitmap), 30, '0'), '')
+    ) t AS bit_pos, bit_val
+    WHERE bit_val = '1'
+    -- 周一：NEXT_DAY('2024-07-30', 'MO') - 7
+    -- 周日：NEXT_DAY('2024-07-30', 'MO') - 1
+    AND DATE_ADD(NEXT_DAY('2024-07-30', 'MO') - 7, bit_pos) BETWEEN (NEXT_DAY('2024-07-30', 'MO') - 7) AND (NEXT_DAY('2024-07-30', 'MO') - 1)
+),
+week_data AS (
+    SELECT
+        guid,
+        COUNT(DISTINCT active_date) AS active_days
+    FROM week_active_dates
+    GROUP BY guid
+),
+week_result AS (
+    SELECT
+        '2024-07-30' AS dt,
+        COUNT(DISTINCT guid) AS wk_count
+    FROM week_data
+),
+-- 计算上一日所在自然月（月初到月末）的用户数量
+month_active_dates AS (
+    SELECT
+        guid,
+        DATE_ADD(TRUNC('2024-07-30', 'MM'), bit_pos) AS active_date
+    FROM dws.dws_user_dau_bitmap_30d
+    LATERAL VIEW POSEXPLODE(
+        SPLIT(LPAD(BIN(bitmap), 30, '0'), '')
+    ) t AS bit_pos, bit_val
+    WHERE bit_val = '1'
+    -- TRUNC：用于日期截断的函数，MM：表示截断到月的级别，最终结果为 2024-07-01
+    -- LAST_DAY：返回指定日期所在月份最后一天，最终结果为 2024-07-31
+    AND DATE_ADD(TRUNC('2024-07-30', 'MM'), bit_pos) BETWEEN TRUNC('2024-07-30', 'MM') AND LAST_DAY('2024-07-30')
+),
+month_data AS (
+    SELECT
+        '2024-07-30' AS dt,
+        guid,
+        COUNT(DISTINCT active_date) AS active_days
+    FROM month_active_dates
+    GROUP BY guid
+),
+month_result AS (
+    SELECT
+        '2024-07-30' AS dt,
+        COUNT(DISTINCT guid) AS mn_count
+    FROM month_data
+)
+-- 将三个子查询的结果合并，输出统计结果
+SELECT
+    d.dt AS calc_dt,
+    d.day_count,
+    w.wk_count,
+    m.mn_count,
+    d.is_weekend,
+    d.is_monthend
+FROM day_result d
+JOIN week_result w
+JOIN month_result m
+ON d.dt = w.dt AND w.dt = m.dt;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_user_active_cont_m (
+    calc_dt           STRING COMMENT '统计日期',
+    month             STRING COMMENT '月份',
+    continuous_5days  INT COMMENT '本月内连续活跃 >= 5天的人数',
+    continuous_7days  INT COMMENT '本月内连续活跃 >= 7天的人数',
+    continuous_15days INT COMMENT '本月内连续活跃 >= 15天的人数',
+    continuous_20days INT COMMENT '本月内连续活跃 >= 20天的人数',
+    continuous_30days INT COMMENT '本月内连续活跃 >= 30天的人数'
+)
+COMMENT '当月连续活跃用户数表'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_user_active_cont_m';
+
+
+WITH tmp AS (
+    SELECT
+        guid,
+        -- 去掉左右空格，只处理有效的连续 1 段，统计连续 1 段的长度
+        LENGTH(TRIM(segment)) AS continuous_days
+    FROM dws.dws_user_dau_bitmap_30d
+    -- 将二进制字符串按 0 分割，再将数组展平为多行，每一行表示一个连续 1 段
+    LATERAL VIEW EXPLODE(SPLIT(BIN(bitmap), '0')) AS segment
+    -- 过滤数组中的空值
+    WHERE segment <> ''
+),
+result AS (
+    SELECT guid, MAX(continuous_days) AS continuous_days
+    FROM tmp
+    GROUP BY guid
+)
+INSERT INTO TABLE ads.ads_user_active_cont_m
+SELECT
+    '2024-07-30' AS calc_dt,
+    MONTH('2024-07-30') AS month,
+    SUM(CASE WHEN continuous_days >= 5 THEN 1 ELSE 0 END) AS cnt_5_days,
+    SUM(CASE WHEN continuous_days >= 7 THEN 1 ELSE 0 END) AS cnt_7_days,
+    SUM(CASE WHEN continuous_days >= 15 THEN 1 ELSE 0 END) AS cnt_15_days,
+    SUM(CASE WHEN continuous_days >= 20 THEN 1 ELSE 0 END) AS cnt_20_days,
+    SUM(CASE WHEN continuous_days = 30 THEN 1 ELSE 0 END) AS cnt_30_days
+FROM result;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_user_churn_cnt (
+    calc_dt   STRING COMMENT '统计日期',
+    churn_cnt BIGINT COMMENT '流失用户数量'
+)
+COMMENT '新用户流失数表'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_user_churn_cnt';
+
+INSERT INTO TABLE ads.ads_user_churn_cnt
+SELECT
+     '2024-07-06' AS calc_dt,
+     COUNT(guid) AS churn_cnt
+FROM (
+    SELECT
+        guid,
+        -- 最后一次未活跃，别担心 9999-12-31，因为 WHERE 过滤条件是 >= 7
+    	MAX(zip_end_dt) AS last_active_dt
+    FROM dws.dws_user_active_range_zip
+    GROUP BY guid
+) AS t1
+-- 2024-07-08 减去 2024-07-01 等于 7，表示闭链为 2024-07-01，也就是说最后一次登录为 2024-06-30
+-- 8 号发现最后一次登录时间为 2024-06-30 的用户已经超过 7 日（含 7 日）未登录
+WHERE DATEDIFF('2024-07-06', last_active_dt) >= 7;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_user_new_cnt (
+    calc_dt     STRING COMMENT '统计日期',
+    day_count   BIGINT COMMENT '当日用户数量',
+    wk_count    BIGINT COMMENT '当周用户数量',
+    mn_count    BIGINT COMMENT '当月用户数量',
+    is_weekend  STRING COMMENT '是否是周末Y,N，用于得到本周最终结果',
+    is_monthend STRING COMMENT '是否是月末Y,N，用于得到本月最终结果'
+)
+COMMENT '新增用户数表'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_user_new_cnt';
+
+-- 根据日期每天增量拉取计算
+-- 计算上一日的新增用户数量，并判断是否是周末和月末
+WITH day_data AS (
+    SELECT
+        '2024-07-06' AS dt,
+        COUNT(DISTINCT guid) AS day_count,
+        -- DAYOFWEEK：返回指定日期的星期，1 表示星期天，7 表示星期六
+        IF(DAYOFWEEK(first_acc_dt) IN (1), 'Y', 'N') AS is_weekend,
+        IF(LAST_DAY(first_acc_dt) = first_acc_dt, 'Y', 'N') AS is_monthend
+    FROM dwd.dwd_user_register
+    WHERE first_acc_dt = '2024-07-06'
+    GROUP BY first_acc_dt
+),
+-- 计算上一日所在周的起始和结束日期，假设周一为第一天
+week_boundary AS (
+    SELECT
+        NEXT_DAY('2024-07-06', 'MO') - 7 AS week_start, -- 2024-07-29
+        NEXT_DAY('2024-07-06', 'MO') - 1 AS week_end -- 2024-08-04
+),
+-- 计算上一日所在自然周（周一到周日）的新增用户数量
+week_data AS (
+    SELECT
+        '2024-07-06' AS dt,
+        COUNT(DISTINCT guid) AS wk_count
+    FROM dwd.dwd_user_register
+    JOIN week_boundary wb ON first_acc_dt BETWEEN wb.week_start AND wb.week_end
+),
+-- 计算上一日所在自然月（月初到月末）的新增用户数量
+month_data AS (
+    SELECT
+        '2024-07-06' AS dt,
+        COUNT(DISTINCT guid) AS mn_count
+    FROM dwd.dwd_user_register
+    -- TRUNC：用于日期截断的函数，MM：表示截断到月的级别，最终结果为 2024-07-01
+    -- LAST_DAY：返回指定日期所在月份最后一天，最终结果为 2024-07-31
+    WHERE first_acc_dt BETWEEN TRUNC('2024-07-06', 'MM') AND LAST_DAY('2024-07-06')
+)
+-- 将三个子查询的结果合并，输出统计结果
+INSERT INTO TABLE ads.ads_user_new_cnt
+SELECT
+    d.dt AS calc_dt,
+    d.day_count,
+    w.wk_count,
+    m.mn_count,
+    d.is_weekend,
+    d.is_monthend
+FROM day_data d
+JOIN week_data w
+JOIN month_data m
+ON d.dt = w.dt AND w.dt = m.dt;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_user_reactivation_cnt (
+    calc_dt          STRING COMMENT '统计日期',
+    reactivation_cnt BIGINT COMMENT '回流用户数量'
+)
+COMMENT '回流用户数表'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_user_reactivation_cnt';
+
+-- 超过 7 日未活跃的流失用户
+WITH user_churn AS (
+    SELECT
+         '2024-07-08' AS calc_dt,
+         guid AS guid
+    FROM (
+        SELECT
+            guid,
+            -- 最后一次未活跃，别担心 9999-12-31，因为 WHERE 过滤条件是 >= 7
+            MAX(zip_end_dt) AS last_active_dt
+        FROM dws.dws_user_active_range_zip
+        GROUP BY guid
+    ) t1
+    -- 2024-07-08 减去 2024-07-01 等于 7，表示闭链为 2024-07-01，也就是说最后一次登录为 2024-06-30
+    -- 8 号发现最后一次登录时间为 2024-06-30 的用户已经超过 7 日（含 7 日）未登录
+    WHERE DATEDIFF('2024-07-08', last_active_dt) >= 7
+),
+-- 超过 7 日未活跃的用户，本日活跃了，且不是新增用户的数量
+user_reactivation AS (
+    SELECT guid
+    FROM dws.dws_user_active_range_zip
+    -- 新活跃且首访日期小于闭链日期 2024-07-09 表示老用户
+    WHERE zip_end_dt = '9999-12-31' AND first_acc_dt < DATE_SUB('2024-07-08', 7)
+    GROUP BY guid
+)
+SELECT
+    '2024-07-16' AS calc_dt,
+    COUNT(DISTINCT ur.guid) AS reactivation_cnt
+FROM user_reactivation AS ur
+LEFT JOIN user_churn AS uc ON ur.guid = uc.guid;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS ads.ads_user_retention_rate (
+    calc_dt        STRING COMMENT '统计日期',
+    first_acc_dt   STRING  COMMENT '新增用户日期',
+    new_user_cnt   BIGINT COMMENT '新增用户数量',
+    ret_days       INT COMMENT '截止当前日期留存天数',
+    ret_user_cnt   BIGINT COMMENT  '留存用户数量',
+    retention_rate DECIMAL(10,2) COMMENT '留存率'
+)
+COMMENT '新用户留存率表'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+LOCATION 'hdfs://hdfs-yjx/yjx/app/ads/ads_user_retention_rate';
+
+-- 计算最近 30 日新增用户数量
+WITH user_register AS (
+    SELECT
+        first_acc_dt,
+        COUNT(DISTINCT guid) AS new_user_cnt
+    FROM dwd.dwd_user_register
+    -- 首访日期大于等于统计日期的 30 天前，小于等于统计日期
+    WHERE first_acc_dt >= DATE_SUB('2024-07-07', 30) AND first_acc_dt <= '2024-07-07'
+    GROUP BY first_acc_dt
+),
+-- 根据统计日期获取留存用户数量
+user_retention AS (
+    SELECT
+        calc_dt,
+        first_acc_dt,
+        ret_days,
+        ret_user_cnt
+    FROM dws.dws_user_retention_cnt
+    WHERE calc_dt = '2024-07-07'
+)
+-- 计算留存率，留存用户 ÷ 起始日新增用户数 × 100%
+INSERT INTO TABLE ads.ads_user_retention_rate
+SELECT
+    a.calc_dt, -- 统计日期
+    a.first_acc_dt, -- 新增用户日期
+    b.new_user_cnt, -- 新增用户数量
+    a.ret_days, -- 截止当前日期留存天数
+    a.ret_user_cnt, -- 留存用户数量
+    a.ret_user_cnt / b.new_user_cnt * 100 AS retention_rate -- 留存率
+FROM user_retention a
+LEFT JOIN user_register b ON a.first_acc_dt = b.first_acc_dt;
+
+select * from ads.ads_user_retention_rate

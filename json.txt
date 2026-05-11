@@ -1,0 +1,203 @@
+datax的采集文件模板如下：
+{
+  "core": {
+    "transport": {
+      "channel": {
+        "speed": {
+          "byte": 1048576
+        }
+      }
+    }
+  },
+  "job": {
+    "setting": {
+      "speed": {
+        "channel": 5,
+        "byte": 5242880
+      },
+      "errorLimit": {
+        "record": 0,
+        "percentage": 0.02
+      }
+    },
+    "content": [
+      {
+        "reader": {
+          "name": "mysqlreader",
+          "parameter": {
+            "username": "root",
+            "password": "123456",
+            "connection": [
+              {
+                "jdbcUrl": ["jdbc:mysql://node01:3306/yjx-shop"],
+                "table": ["yjx_goods"]
+              }
+            ],
+            "column": [
+              "`id`",
+              "`create_time`",
+              "`delete_flag`",
+              "`auth_message`",
+              "`brand_id`",
+              "`category_path`",
+              "`cost`",
+              "`goods_name`",
+              "`goods_unit`",
+              "`goods_video`",
+              "`intro`",
+              "`is_auth`",
+              "`market_enable`",
+              "`mobile_intro`",
+              "`original`",
+              "`price`",
+              "`sales_model`",
+              "`self_operated`",
+              "`store_id`",
+              "`selling_point`",
+              "`shop_category_path`",
+              "`sn`",
+              "`under_message`",
+              "`weight`",
+              "`store_category_path`",
+              "`params`",
+              "`goods_type`"
+            ],
+            "splitPk": ""
+          }
+        },
+        "writer": {
+          "name": "hdfswriter",
+          "parameter": {
+            "defaultFS": "hdfs://hdfs-yjx",
+            "hadoopConfig": {
+              "dfs.nameservices": "hdfs-yjx",
+              "dfs.ha.namenodes.hdfs-yjx": "nn1,nn2",
+              "dfs.namenode.rpc-address.hdfs-yjx.nn1": "node01:8020",
+              "dfs.namenode.rpc-address.hdfs-yjx.nn2": "node02:8020",
+              "dfs.client.failover.proxy.provider.hdfs-yjx": "org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider"
+            },
+            "fileType": "text",
+            "path": "/yjx/app/ods/ods_yjx_goods_full/dt=${dt}",
+            "fileName": "yjx_goods_",
+            "writeMode": "append",
+            "fieldDelimiter": "|",
+            "column": [
+              {
+                "name": "id",
+                "type": "bigint"
+              },
+              {
+                "name": "create_time",
+                "type": "string"
+              },
+              {
+                "name": "delete_flag",
+                "type": "string"
+              },
+              {
+                "name": "auth_message",
+                "type": "string"
+              },
+              {
+                "name": "brand_id",
+                "type": "string"
+              },
+              {
+                "name": "category_path",
+                "type": "string"
+              },
+              {
+                "name": "cost",
+                "type": "string"
+              },
+              {
+                "name": "goods_name",
+                "type": "string"
+              },
+              {
+                "name": "goods_unit",
+                "type": "string"
+              },
+              {
+                "name": "goods_video",
+                "type": "string"
+              },
+              {
+                "name": "intro",
+                "type": "string"
+              },
+              {
+                "name": "is_auth",
+                "type": "string"
+              },
+              {
+                "name": "market_enable",
+                "type": "string"
+              },
+              {
+                "name": "mobile_intro",
+                "type": "string"
+              },
+              {
+                "name": "original",
+                "type": "string"
+              },
+              {
+                "name": "price",
+                "type": "string"
+              },
+              {
+                "name": "sales_model",
+                "type": "string"
+              },
+              {
+                "name": "self_operated",
+                "type": "string"
+              },
+              {
+                "name": "store_id",
+                "type": "string"
+              },
+              {
+                "name": "selling_point",
+                "type": "string"
+              },
+              {
+                "name": "shop_category_path",
+                "type": "string"
+              },
+              {
+                "name": "sn",
+                "type": "string"
+              },
+              {
+                "name": "under_message",
+                "type": "string"
+              },
+              {
+                "name": "weight",
+                "type": "string"
+              },
+              {
+                "name": "store_category_path",
+                "type": "string"
+              },
+              {
+                "name": "params",
+                "type": "string"
+              },
+              {
+                "name": "goods_type",
+                "type": "string"
+              },
+              {
+                "name": "dt",
+                "type": "string"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}
